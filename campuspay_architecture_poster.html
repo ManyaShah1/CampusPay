@@ -1,0 +1,2326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CampusPay — System Architecture Blueprint | DBIT Mumbai</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,600;0,700;1,400&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-black: #0A0A0A;
+    --primary-yellow: #FFE500;
+    --secondary-purple: #6B21A8;
+    --light-purple: #C084FC;
+    --white: #FFFFFF;
+    --card-dark: #1A1A1A;
+    --border-stroke: #2A2A2A;
+    --success-green: #22C55E;
+    --muted-text: #888888;
+    --band-bg: #111111;
+    --teal-accent: #14B8A6;
+    --amber-accent: #F59E0B;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background-color: var(--bg-black);
+    color: var(--white);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.4;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    selection-background-color: var(--primary-yellow);
+    selection-color: var(--bg-black);
+  }
+
+  /* Grid overlay for war room poster blueprint feel */
+  .blueprint-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    background-image: 
+      radial-gradient(circle at 50% 10%, rgba(107, 33, 168, 0.15) 0%, transparent 60%),
+      radial-gradient(circle at 80% 80%, rgba(255, 229, 0, 0.05) 0%, transparent 40%),
+      linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+    z-index: 0;
+  }
+
+  /* Control bar */
+  .interactive-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10, 10, 10, 0.88);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-stroke);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .toolbar-badge {
+    background: #141414;
+    border: 1px solid var(--border-stroke);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--light-purple);
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .toolbar-badge::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--success-green);
+    box-shadow: 0 0 8px var(--success-green);
+  }
+
+  .filter-pills {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .filter-btn {
+    background: #181818;
+    color: #AAA;
+    border: 1px solid var(--border-stroke);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .filter-btn:hover {
+    color: var(--white);
+    border-color: #555;
+  }
+
+  .filter-btn.active {
+    background: var(--primary-yellow);
+    color: var(--bg-black);
+    border-color: var(--primary-yellow);
+    box-shadow: 0 0 14px rgba(255, 229, 0, 0.4);
+  }
+
+  .btn-action {
+    background: transparent;
+    color: var(--white);
+    border: 1px solid var(--border-stroke);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+  }
+
+  .btn-action:hover {
+    background: #222;
+    border-color: var(--primary-yellow);
+  }
+
+  /* Main poster container */
+  .poster-wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 1780px;
+    margin: 0 auto;
+    padding: 32px 32px 80px 32px;
+  }
+
+  /* Header Section */
+  .poster-header {
+    display: grid;
+    grid-template-columns: 280px 1fr 280px;
+    align-items: center;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-stroke);
+  }
+
+  .dbit-brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .dbit-emblem {
+    width: 48px;
+    height: 48px;
+    border: 2px solid var(--primary-yellow);
+    border-radius: 8px;
+    background: #141414;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800;
+    color: var(--primary-yellow);
+    font-size: 16px;
+    box-shadow: 0 0 12px rgba(255, 229, 0, 0.2);
+  }
+
+  .dbit-text h4 {
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--white);
+  }
+
+  .dbit-text p {
+    font-size: 11px;
+    color: var(--muted-text);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .center-brand {
+    text-align: center;
+  }
+
+  .brand-title-wrap {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .brand-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 42px;
+    font-weight: 800;
+    color: var(--primary-yellow);
+    letter-spacing: -1px;
+    text-transform: uppercase;
+    text-shadow: 0 0 24px rgba(255, 229, 0, 0.35);
+  }
+
+  .brand-version {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--light-purple);
+    background: rgba(107, 33, 168, 0.3);
+    border: 1px solid var(--secondary-purple);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  .brand-tagline {
+    font-size: 15px;
+    color: var(--muted-text);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+  }
+
+  .brand-tagline span {
+    color: var(--white);
+    font-weight: 600;
+  }
+
+  .header-meta {
+    text-align: right;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted-text);
+  }
+
+  .header-meta .live-indicator {
+    color: var(--success-green);
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  /* Three Payment Mode Summary Tiers */
+  .payment-tiers-bar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 36px;
+  }
+
+  .tier-card {
+    background: var(--card-dark);
+    padding: 16px 20px;
+    border-radius: 8px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .tier-card:hover {
+    transform: translateY(-2px);
+  }
+
+  .tier-card.tier-1 {
+    border: 1px solid var(--success-green);
+    box-shadow: 0 0 16px rgba(34, 197, 94, 0.1);
+  }
+  .tier-card.tier-2 {
+    border: 1.5px solid var(--primary-yellow);
+    box-shadow: 0 0 20px rgba(255, 229, 0, 0.15);
+  }
+  .tier-card.tier-3 {
+    border: 1px solid var(--light-purple);
+    box-shadow: 0 0 16px rgba(192, 132, 252, 0.1);
+  }
+
+  .tier-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .tier-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .tier-1 .tier-name { color: var(--success-green); }
+  .tier-2 .tier-name { color: var(--primary-yellow); }
+  .tier-3 .tier-name { color: var(--light-purple); }
+
+  .tier-badge {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--white);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .tier-desc {
+    font-size: 12px;
+    color: #DDD;
+    line-height: 1.45;
+  }
+
+  .tier-desc strong {
+    color: var(--white);
+  }
+
+  /* Layer Headers with thick yellow rule labeled on the left */
+  .layer-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 32px 0 22px 0;
+  }
+
+  .layer-tag {
+    background: var(--primary-yellow);
+    color: var(--bg-black);
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    padding: 6px 16px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    box-shadow: 0 0 16px rgba(255, 229, 0, 0.3);
+  }
+
+  .layer-line {
+    flex: 1;
+    height: 3px;
+    background: var(--primary-yellow);
+    box-shadow: 0 0 10px rgba(255, 229, 0, 0.4);
+  }
+
+  .layer-subtext {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted-text);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* Architecture Core Layout (Left Flow Nav + Right Layer Panels) */
+  .architecture-body {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 28px;
+    align-items: start;
+  }
+
+  /* Left Vertical Step Flow (① to ⑧) */
+  .flow-timeline-card {
+    background: #0F0F0F;
+    border: 1px solid var(--border-stroke);
+    border-radius: 12px;
+    padding: 20px;
+    position: sticky;
+    top: 72px;
+  }
+
+  .flow-timeline-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-stroke);
+  }
+
+  .flow-timeline-header h3 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--primary-yellow);
+  }
+
+  .flow-step-item {
+    display: flex;
+    gap: 12px;
+    position: relative;
+    padding-bottom: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .flow-step-item:last-child {
+    padding-bottom: 0;
+  }
+
+  .flow-step-item::before {
+    content: '';
+    position: absolute;
+    left: 14px;
+    top: 28px;
+    bottom: 0;
+    width: 2px;
+    background: #252525;
+  }
+
+  .flow-step-item:last-child::before {
+    display: none;
+  }
+
+  .flow-step-circle {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #181818;
+    border: 2px solid var(--primary-yellow);
+    color: var(--primary-yellow);
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    z-index: 2;
+    transition: all 0.2s;
+  }
+
+  .flow-step-item:hover .flow-step-circle,
+  .flow-step-item.active .flow-step-circle {
+    background: var(--primary-yellow);
+    color: var(--bg-black);
+    box-shadow: 0 0 12px rgba(255, 229, 0, 0.6);
+  }
+
+  .flow-step-content {
+    flex: 1;
+  }
+
+  .flow-step-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--white);
+    margin-bottom: 3px;
+  }
+
+  .flow-step-desc {
+    font-size: 11px;
+    color: var(--muted-text);
+    line-height: 1.35;
+  }
+
+  .flow-step-item:hover .flow-step-desc,
+  .flow-step-item.active .flow-step-desc {
+    color: #E2E8F0;
+  }
+
+  /* Layers Column */
+  .layers-main-column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* LAYER 1: CLIENT DEVICES — Three Columns */
+  .client-devices-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.05fr;
+    gap: 20px;
+  }
+
+  /* Silhouette Outlines */
+  .device-column {
+    position: relative;
+    border-radius: 18px;
+    padding: 18px 16px;
+    background: #0E0E0E;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    transition: border-color 0.2s;
+  }
+
+  /* Column 1: Student App Phone Silhouette */
+  .phone-silhouette {
+    border: 2px solid var(--primary-yellow);
+    box-shadow: 0 0 20px rgba(255, 229, 0, 0.12);
+  }
+
+  .phone-notch {
+    width: 80px;
+    height: 14px;
+    background: #1A1A1A;
+    border-radius: 0 0 10px 10px;
+    margin: -18px auto 14px auto;
+    border-bottom: 1px solid var(--border-stroke);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .notch-camera {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #0A0A0A;
+    border: 1px solid #333;
+  }
+
+  .notch-speaker {
+    width: 22px;
+    height: 3px;
+    border-radius: 2px;
+    background: #333;
+  }
+
+  .device-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-stroke);
+  }
+
+  .device-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .device-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--light-purple);
+  }
+
+  /* Module group inside devices */
+  .module-group {
+    margin-bottom: 12px;
+  }
+
+  .group-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--muted-text);
+    margin-bottom: 6px;
+    padding-left: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .group-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #222;
+  }
+
+  /* Dark Component Cards */
+  .component-card {
+    background: var(--card-dark);
+    border: 1px solid var(--border-stroke);
+    border-radius: 6px;
+    padding: 9px 12px;
+    margin-bottom: 7px;
+    transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+    position: relative;
+  }
+
+  .component-card:hover {
+    border-color: #444;
+    transform: translateX(2px);
+  }
+
+  /* Purple left accent for student cards */
+  .purple-accent {
+    border-left: 4px solid var(--secondary-purple) !important;
+  }
+
+  /* Teal left accent for vendor soundbox cards */
+  .teal-accent {
+    border-left: 4px solid var(--teal-accent) !important;
+  }
+
+  /* White cards with yellow left border for Admin panel */
+  .admin-white-card {
+    background: #FFFFFF !important;
+    border: 1px solid #E2E8F0;
+    border-left: 4px solid var(--primary-yellow) !important;
+    color: #0A0A0A !important;
+  }
+
+  .admin-white-card .component-title {
+    color: #0A0A0A !important;
+  }
+
+  .admin-white-card .component-desc {
+    color: #333333 !important;
+  }
+
+  .admin-white-card .tech-tag {
+    background: #F1F5F9 !important;
+    color: #6B21A8 !important;
+    border: 1px solid #CBD5E1 !important;
+  }
+
+  .component-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 3px;
+  }
+
+  .component-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--white);
+  }
+
+  .tech-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    color: var(--light-purple);
+    background: rgba(107, 33, 168, 0.18);
+    border: 1px solid rgba(192, 132, 252, 0.25);
+    padding: 1px 6px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+
+  .component-desc {
+    font-size: 11px;
+    color: #B5B5B5;
+    line-height: 1.35;
+  }
+
+  .component-desc code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--light-purple);
+    background: #111;
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+
+  /* Column 2: Vendor Soundbox Silhouette */
+  .soundbox-silhouette {
+    border: 2px solid var(--primary-yellow);
+    box-shadow: 0 0 20px rgba(255, 229, 0, 0.12);
+  }
+
+  .soundbox-grille-banner {
+    margin-top: 14px;
+    padding: 12px;
+    background: #141414;
+    border: 1px dashed var(--primary-yellow);
+    border-radius: 8px;
+    text-align: center;
+  }
+
+  .speaker-holes {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+
+  .speaker-dot {
+    width: 4px;
+    height: 4px;
+    background: var(--muted-text);
+    border-radius: 50%;
+  }
+
+  .soundbox-audio-label {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--primary-yellow);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 10px rgba(255, 229, 0, 0.4);
+  }
+
+  /* Column 3: Admin Panel Silhouette (Monitor/Laptop) */
+  .admin-silhouette {
+    border: 2px solid var(--secondary-purple);
+    box-shadow: 0 0 20px rgba(107, 33, 168, 0.2);
+  }
+
+  .monitor-stand {
+    width: 60px;
+    height: 10px;
+    background: #222;
+    border-radius: 0 0 6px 6px;
+    margin: 14px auto 0 auto;
+    border: 1px solid #333;
+    border-top: none;
+  }
+
+  /* Security Callout Badges */
+  .security-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255, 229, 0, 0.08);
+    border: 1px solid var(--primary-yellow);
+    color: var(--primary-yellow);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 12px;
+    font-weight: 600;
+    margin-top: 4px;
+  }
+
+  /* LAYER 2: COMMUNICATION CHANNELS BAND */
+  .channels-band-container {
+    background: var(--band-bg);
+    border: 1px solid var(--border-stroke);
+    border-radius: 14px;
+    padding: 20px 24px;
+    position: relative;
+    box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.7);
+  }
+
+  .channels-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .channel-card {
+    background: #171717;
+    border: 1px solid var(--border-stroke);
+    border-radius: 8px;
+    padding: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .channel-pill-label {
+    background: var(--primary-yellow);
+    color: var(--bg-black);
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800;
+    font-size: 11px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+    box-shadow: 0 0 10px rgba(255, 229, 0, 0.25);
+  }
+
+  .channel-card.ble .channel-pill-label {
+    background: var(--light-purple);
+    color: var(--bg-black);
+    box-shadow: 0 0 10px rgba(192, 132, 252, 0.25);
+  }
+
+  .channel-card.ussd .channel-pill-label {
+    background: var(--amber-accent);
+    color: var(--bg-black);
+  }
+
+  .channel-card.rest .channel-pill-label {
+    background: var(--white);
+    color: var(--bg-black);
+  }
+
+  .channel-details {
+    font-size: 11.5px;
+    color: #CCC;
+    line-height: 1.4;
+  }
+
+  .channel-details strong {
+    color: var(--white);
+  }
+
+  .channel-visual-canvas {
+    width: 100%;
+    height: 105px;
+    background: #0D0D0D;
+    border: 1px solid #222;
+    border-radius: 8px;
+    margin-top: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Interactive channel visual representations inside SVG */
+  .wave-line {
+    animation: wavePulse 1.8s infinite linear;
+  }
+
+  @keyframes wavePulse {
+    0% { stroke-dashoffset: 60; }
+    100% { stroke-dashoffset: 0; }
+  }
+
+  .signal-dot {
+    animation: signalMove 2s infinite ease-in-out;
+  }
+
+  @keyframes signalMove {
+    0% { transform: translateX(0); opacity: 0; }
+    30% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { transform: translateX(180px); opacity: 0; }
+  }
+
+  /* P2P Mini Flow Container inside Band */
+  .p2p-mini-flow-box {
+    background: rgba(107, 33, 168, 0.12);
+    border: 1.5px solid var(--secondary-purple);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-top: 16px;
+    position: relative;
+  }
+
+  .p2p-header-wrap {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .p2p-badge {
+    background: var(--secondary-purple);
+    color: var(--white);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    text-transform: uppercase;
+  }
+
+  .p2p-flow-columns {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 20px;
+    align-items: center;
+  }
+
+  .p2p-peer-box {
+    background: #141414;
+    border: 1px solid var(--border-stroke);
+    border-radius: 8px;
+    padding: 12px 16px;
+  }
+
+  .p2p-peer-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800;
+    font-size: 12px;
+    color: var(--light-purple);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .p2p-peer-step {
+    font-size: 11px;
+    color: #BBB;
+    margin-bottom: 4px;
+    line-height: 1.35;
+  }
+
+  .p2p-center-signals {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 320px;
+  }
+
+  .signal-pill-arrow {
+    background: #0E0E0E;
+    border: 1px solid var(--border-stroke);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--primary-yellow);
+  }
+
+  .signal-pill-arrow.ack {
+    color: var(--success-green);
+    border-color: rgba(34, 197, 94, 0.4);
+  }
+
+  /* LAYER 3: BACKEND SERVER — Full Width Container */
+  .backend-server-container {
+    background: var(--band-bg);
+    border: 1px solid var(--border-stroke);
+    border-top: 4px solid var(--primary-yellow);
+    border-radius: 14px;
+    padding: 24px;
+    position: relative;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+  }
+
+  .server-top-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border-stroke);
+  }
+
+  .server-title-group h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .server-title-group p {
+    font-size: 12px;
+    color: var(--muted-text);
+    margin-top: 3px;
+  }
+
+  .server-tech-specs {
+    text-align: right;
+  }
+
+  .server-tech-specs .stack-line {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--light-purple);
+    font-weight: 600;
+  }
+
+  .server-tech-specs .infra-line {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted-text);
+  }
+
+  /* 3x3 Server Grid */
+  .server-modules-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .server-module-card {
+    background: #181818;
+    border: 1px solid var(--border-stroke);
+    border-radius: 8px;
+    padding: 14px 16px;
+    position: relative;
+  }
+
+  .server-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    border-bottom: 1px solid #282828;
+    padding-bottom: 6px;
+  }
+
+  .server-module-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--light-purple);
+  }
+
+  .server-card-body {
+    font-size: 11.5px;
+    color: #CCC;
+    line-height: 1.45;
+  }
+
+  /* Database + Cache full width bottom strip */
+  .server-db-footer {
+    background: #121212;
+    border: 1px solid var(--border-stroke);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+
+  .db-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .db-main-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .db-orm-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--light-purple);
+  }
+
+  .tables-pills-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .db-table-pill {
+    background: #1D1D1D;
+    border: 1px solid var(--primary-yellow);
+    color: var(--primary-yellow);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .db-table-pill::before {
+    content: '▤';
+    font-size: 10px;
+    opacity: 0.7;
+  }
+
+  .redis-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border-stroke);
+  }
+
+  .redis-badge {
+    background: #DC2626;
+    color: #FFF;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .redis-desc {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted-text);
+  }
+
+  .redis-desc span {
+    color: var(--white);
+  }
+
+  /* Floating Security Callout Cards */
+  .security-callouts-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-top: 24px;
+  }
+
+  .callout-box {
+    background: #111111;
+    border: 1px dashed var(--primary-yellow);
+    border-radius: 8px;
+    padding: 12px 14px;
+    position: relative;
+    transition: all 0.2s;
+  }
+
+  .callout-box:hover {
+    background: #171717;
+    border-style: solid;
+    box-shadow: 0 0 14px rgba(255, 229, 0, 0.2);
+  }
+
+  .callout-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--primary-yellow);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+
+  .callout-target {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--light-purple);
+    margin-bottom: 4px;
+  }
+
+  .callout-quote {
+    font-size: 11px;
+    color: #DDD;
+    line-height: 1.35;
+    font-style: italic;
+  }
+
+  /* Bottom Legend and Poster Footer */
+  .poster-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 36px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-stroke);
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .legend-container {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: #111;
+    border: 1px solid var(--border-stroke);
+    padding: 10px 18px;
+    border-radius: 8px;
+  }
+
+  .legend-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted-text);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+  }
+
+  .swatch-purple { background: var(--secondary-purple); box-shadow: 0 0 6px var(--secondary-purple); }
+  .swatch-yellow { background: var(--primary-yellow); box-shadow: 0 0 6px var(--primary-yellow); }
+  .swatch-white  { background: var(--white); box-shadow: 0 0 6px rgba(255, 255, 255, 0.4); }
+  .swatch-green  { background: var(--success-green); box-shadow: 0 0 6px var(--success-green); }
+
+  .footer-copyright {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted-text);
+    text-align: right;
+  }
+
+  /* Highlight mode styles */
+  .highlight-active {
+    outline: 2px solid var(--primary-yellow) !important;
+    box-shadow: 0 0 20px rgba(255, 229, 0, 0.5) !important;
+  }
+
+  @media print {
+    .interactive-toolbar { display: none; }
+    body { background: #000; }
+    .poster-wrapper { padding: 0; }
+  }
+
+  @media (max-width: 1300px) {
+    .architecture-body { grid-template-columns: 1fr; }
+    .flow-timeline-card { position: static; margin-bottom: 24px; }
+    .client-devices-grid { grid-template-columns: 1fr; }
+    .channels-grid { grid-template-columns: 1fr 1fr; }
+    .server-modules-grid { grid-template-columns: 1fr 1fr; }
+    .security-callouts-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="blueprint-bg"></div>
+
+<!-- Top Interactive Navigation & Filter Bar -->
+<header class="interactive-toolbar">
+  <div class="toolbar-left">
+    <div class="toolbar-badge">CAMPUSPAY SYSTEM BLUEPRINT // 2026 EDITION</div>
+    <div class="filter-pills">
+      <button class="filter-btn active" onclick="setFilter('all')">ALL LAYERS</button>
+      <button class="filter-btn" onclick="setFilter('offline')">OFFLINE SOUND + BLE</button>
+      <button class="filter-btn" onclick="setFilter('p2p')">P2P ENGINE</button>
+      <button class="filter-btn" onclick="setFilter('ussd')">SILENT USSD</button>
+      <button class="filter-btn" onclick="setFilter('security')">SECURITY AUDIT</button>
+    </div>
+  </div>
+  <div class="toolbar-right" style="display: flex; gap: 10px;">
+    <button class="btn-action" onclick="window.print()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      PRINT / EXPORT A2 POSTER
+    </button>
+    <button class="btn-action" onclick="togglePulse()">
+      <span id="pulseStatus">⚡ SIMULATE FLOWS</span>
+    </button>
+  </div>
+</header>
+
+<div class="poster-wrapper">
+
+  <!-- POSTER MAIN HEADER -->
+  <header class="poster-header">
+    <div class="dbit-brand">
+      <div class="dbit-emblem">DBIT</div>
+      <div class="dbit-text">
+        <h4>Don Bosco Institute of Technology</h4>
+        <p>Kurla (W), Mumbai • Campus FinTech</p>
+      </div>
+    </div>
+    
+    <div class="center-brand">
+      <div class="brand-title-wrap">
+        <h1 class="brand-title">CAMPUSPAY</h1>
+        <span class="brand-version">v2.4 OFFLINE-FIRST</span>
+      </div>
+      <p class="brand-tagline">Pay anywhere. <span>Signal or not.</span></p>
+    </div>
+
+    <div class="header-meta">
+      <div class="live-indicator">● OPERATIONAL TOPOLOGY</div>
+      <div>ENCRYPTION: AES-256 / secp256k1</div>
+      <div>ACOUSTIC: 18-22kHz FSK CARRIER</div>
+    </div>
+  </header>
+
+  <!-- THREE PAYMENT MODE SUMMARY CARDS -->
+  <section class="payment-tiers-bar">
+    <div class="tier-card tier-1" id="tier-online">
+      <div class="tier-header">
+        <div class="tier-name">TIER 1 — ONLINE UPI</div>
+        <span class="tier-badge">GREEN RAILS</span>
+      </div>
+      <div class="tier-desc">
+        <strong>Internet available</strong> → Razorpay SDK → NPCI rails → real-time bank debit → instant confirmation
+      </div>
+    </div>
+
+    <div class="tier-card tier-2" id="tier-offline">
+      <div class="tier-header">
+        <div class="tier-name">TIER 2 — OFFLINE WALLET</div>
+        <span class="tier-badge" style="color:var(--primary-yellow); border-color:var(--primary-yellow)">DUAL-BEACON ZERO-NET</span>
+      </div>
+      <div class="tier-desc">
+        <strong>No internet + wallet pre-loaded</strong> → sound wave + BLE → ECDSA token → SoundBox confirm → deferred settlement
+      </div>
+    </div>
+
+    <div class="tier-card tier-3" id="tier-ussd">
+      <div class="tier-header">
+        <div class="tier-name">TIER 3 — SILENT USSD</div>
+        <span class="tier-badge" style="color:var(--light-purple); border-color:var(--light-purple)">CELLULAR REVERSION</span>
+      </div>
+      <div class="tier-desc">
+        <strong>No internet + no wallet + cellular signal</strong> → TelephonyManager → silent *99# → bank-to-bank → CampusPay UI only
+      </div>
+    </div>
+  </section>
+
+  <!-- BODY GRID (Left Step-by-Step Flow + Right Horizontal Layers) -->
+  <div class="architecture-body">
+
+    <!-- LEFT SIDE: STEP-BY-STEP FLOW ANNOTATIONS ① to ⑧ -->
+    <aside class="flow-timeline-card" id="step-timeline">
+      <div class="flow-timeline-header">
+        <h3>PAYMENT LIFECYCLE</h3>
+        <span style="font-family:'JetBrains Mono'; font-size:10px; color:var(--primary-yellow)">8 PHASES</span>
+      </div>
+
+      <div class="flow-step-item" onclick="highlightStep(1)" id="step-1">
+        <div class="flow-step-circle">①</div>
+        <div class="flow-step-content">
+          <div class="flow-step-title">PRE-CONDITION (ONLINE)</div>
+          <div class="flow-step-desc">Server generates 10 ECDSA tokens → delivered to student app via HTTPS → stored in flutter_secure_storage → wallet balance synced.</div>
+        </div>
+      </div>
+
+      <div class="flow-step-item" onclick="highlightStep(2)" id="step-2">
+        <div class="flow-step-circle">②</div>
+        <div class="flow-step-content">
+          <div class="flow-step-title">QR SCAN</div>
+          <div class="flow-step-desc">Student scans vendor printed QR → reads merchant_id + soundbox_ble_id → app pre-connects to SoundBox BLE beacon in background.</div>
+        </div>
+      </div>
+
+      <div class="flow-step-item" onclick="highlightStep(3)" id="step-3">
+        <div class="flow-step-circle">③</div>
+        <div class="flow-step-content">
+          <div class="flow-step-title">AMOUNT + PAYLOAD</div>
+          <div class="flow-step-desc">Student enters amount → app picks token → marks USED → generates signed payload {token_id, merchant_id, amount, timestamp, nonce, payer_sig} → deducts from wallet → writes SQLite.</div>
+        </div>
+      </div>
+
+      <div class="flow-step-item" onclick="highlightStep(4)" id="step-4">
+        <div class="flow-step-circle">④</div>
+        <div class="flow-step-content">
+          <div class="flow-step-title">DUAL TRANSMISSION</div>
+          <div class="flow-step-desc">Simultaneously: emits 18–22kHz FSK burst via speaker + broadcasts BLE advertisement — both carry same signed payload.</div>
+        </div>
+      </div>
+
+      <div class="flow-step-item" onclick="highlightStep(5)" id="step-5">
+        <div class="flow-step-circle">⑤</div>
+        <div class="flow-step-content">
+          <div class="flow-step-title">SOUNDBOX RECEIVES</div>
+          <div class="flow-step-desc">Mic catches ultrasonic burst OR BLE scanner catches advertisement (whichever first) → decodes payload.</div>
+        </div>
+      </div>
+
+      <div class="flow-step-item" onclick="highlightStep(6)" id="step-6">
+        <div class="flow-step-circle">⑥</div>
+        <div class="flow-step-content">
+          <div class="flow-step-title">LOCAL VERIFICATION</div>
+          <div class="flow-step-desc">ECDSA verify using pre-loaded server public key → timestamp ±5m check → nonce check → expiry check → all pass ✅.</div>
+        </div>
+      </div>
+
+      <div class="flow-step-item" onclick="highlightStep(7)" id="step-7">
+        <div class="flow-step-circle">⑦</div>
+        <div class="flow-step-content">
+          <div class="flow-step-title">DOUBLE CONFIRMATION</div>
+          <div class="flow-step-desc">SoundBox: "CampusPay se ₹80 mila" 🔊 + screen shows ✅. Student phone: signed receipt screen + receipt QR.</div>
+        </div>
+      </div>
+
+      <div class="flow-step-item" onclick="highlightStep(8)" id="step-8">
+        <div class="flow-step-circle">⑧</div>
+        <div class="flow-step-content">
+          <div class="flow-step-title">RECONNECT + RECONCILE</div>
+          <div class="flow-step-desc">Student app syncs debit ledger → SoundBox syncs credit log → server matches token_id on BOTH sides → fraud checks pass → merchant settled → CampusCoins awarded.</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- RIGHT MAIN FLOW LAYERS -->
+    <div class="layers-main-column">
+
+      <!-- ========================================================= -->
+      <!-- LAYER 1 — CLIENT DEVICES (Three Device Columns) -->
+      <!-- ========================================================= -->
+      <div class="layer-divider">
+        <div class="layer-tag">LAYER 1 — CLIENT DEVICES</div>
+        <div class="layer-line"></div>
+        <div class="layer-subtext">3 TARGET RUNTIMES • ZERO-SHARED-MEMORY • EDGE ISOLATED</div>
+      </div>
+
+      <div class="client-devices-grid">
+
+        <!-- COLUMN 1: STUDENT APP (Phone Silhouette) -->
+        <div class="device-column phone-silhouette" id="device-student-app">
+          <div class="phone-notch">
+            <div class="notch-camera"></div>
+            <div class="notch-speaker"></div>
+          </div>
+          
+          <div class="device-header">
+            <div class="device-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary-yellow)" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+              STUDENT APP
+            </div>
+            <div class="device-sub">FLUTTER / DART MOBILE</div>
+          </div>
+
+          <!-- INPUT MODULE -->
+          <div class="module-group">
+            <div class="group-label">INPUT SUBSYSTEM</div>
+            <div class="component-card purple-accent" id="mod-qr-scanner">
+              <div class="component-top">
+                <span class="component-title">QR SCANNER</span>
+                <span class="tech-tag">mobile_scanner</span>
+              </div>
+              <div class="component-desc">Reads vendor static QR code; extracts UPI deep link, merchant_id & SoundBox BLE beacon UUID.</div>
+            </div>
+
+            <div class="component-card purple-accent" id="mod-amount-entry">
+              <div class="component-top">
+                <span class="component-title">AMOUNT ENTRY</span>
+                <span class="tech-tag">Flutter UI</span>
+              </div>
+              <div class="component-desc">Manual rupee input post-scan; validates local balance and remaining offline token quota.</div>
+            </div>
+          </div>
+
+          <!-- WALLET MODULE -->
+          <div class="module-group">
+            <div class="group-label">SECURE VAULT & WALLET</div>
+            <div class="component-card purple-accent" id="mod-campus-wallet">
+              <div class="component-top">
+                <span class="component-title">CAMPUS WALLET</span>
+                <span class="tech-tag">sqflite + encrypt</span>
+              </div>
+              <div class="component-desc">AES-256 encrypted local balance. High-speed offline ledger debit with cryptographic commit.</div>
+              <div class="security-pill">🔐 AES-256 AT REST</div>
+            </div>
+
+            <div class="component-card purple-accent" id="mod-token-store">
+              <div class="component-top">
+                <span class="component-title">TOKEN STORE</span>
+                <span class="tech-tag">flutter_secure_storage</span>
+              </div>
+              <div class="component-desc">Holds 10 pre-auth ECDSA tokens issued by server. Auto-rotates; strictly enforces 48hr expiry.</div>
+              <div class="security-pill">⏱ 48HR EXPIRY</div>
+              <div class="security-pill">1️⃣ SINGLE USE ONLY</div>
+            </div>
+          </div>
+
+          <!-- CRYPTO MODULE -->
+          <div class="module-group">
+            <div class="group-label">CRYPTOGRAPHIC ENGINE</div>
+            <div class="component-card purple-accent" id="mod-ecdsa-signer">
+              <div class="component-top">
+                <span class="component-title">ECDSA SIGNER</span>
+                <span class="tech-tag">pointycastle secp256k1</span>
+              </div>
+              <div class="component-desc">Signs each outbound payload with device private key: <code>token_id + merchant_id + amount + timestamp + nonce + payer_signature</code></div>
+              <div class="security-pill">🔑 PRIVATE KEY ISOLATED</div>
+              <div class="security-pill">🎲 UUID NONCE</div>
+            </div>
+          </div>
+
+          <!-- TRANSMISSION MODULE -->
+          <div class="module-group">
+            <div class="group-label">MULTI-TRANSMISSION STACK</div>
+            <div class="component-card purple-accent" id="mod-sound-emitter">
+              <div class="component-top">
+                <span class="component-title">SOUND EMITTER</span>
+                <span class="tech-tag">flutter_sound</span>
+              </div>
+              <div class="component-desc">18–22kHz Frequency Shift Keying (FSK) ultrasonic burst. Effective range: 30cm to 1m.</div>
+            </div>
+
+            <div class="component-card purple-accent" id="mod-ble-broadcaster">
+              <div class="component-top">
+                <span class="component-title">BLE BROADCASTER</span>
+                <span class="tech-tag">flutter_blue_plus</span>
+              </div>
+              <div class="component-desc">Simultaneous advertisement broadcast. Range: 10–30m. Zero-pairing handshake protocol.</div>
+            </div>
+
+            <div class="component-card purple-accent" id="mod-mic-listener">
+              <div class="component-top">
+                <span class="component-title">MIC LISTENER</span>
+                <span class="tech-tag">flutter_sound</span>
+              </div>
+              <div class="component-desc">Always-on background listener for acoustic ACK tone & P2P incoming payment bursts.</div>
+            </div>
+
+            <div class="component-card purple-accent" id="mod-ussd-interface">
+              <div class="component-top">
+                <span class="component-title">USSD INTERFACE</span>
+                <span class="tech-tag">TelephonyManager</span>
+              </div>
+              <div class="component-desc">Silent *99# session execution. Direct bank-to-bank rail over GSM/LTE voice channel.</div>
+              <div class="security-pill">🤫 MPIN NEVER STORED</div>
+            </div>
+          </div>
+
+          <!-- STORAGE MODULE -->
+          <div class="module-group">
+            <div class="group-label">PERSISTENCE & PROOF</div>
+            <div class="component-card purple-accent" id="mod-student-ledger">
+              <div class="component-top">
+                <span class="component-title">LOCAL LEDGER</span>
+                <span class="tech-tag">sqflite SQLite</span>
+              </div>
+              <div class="component-desc">Logs every single event: <code>txn_id, token_id, amount, timestamp, status</code>. Immutable journal.</div>
+            </div>
+
+            <div class="component-card purple-accent" id="mod-receipt-gen">
+              <div class="component-top">
+                <span class="component-title">RECEIPT GENERATOR</span>
+                <span class="tech-tag">qr_flutter</span>
+              </div>
+              <div class="component-desc">Renders signed receipt screen + dynamic QR code for optional physical merchant optical scan.</div>
+            </div>
+          </div>
+
+          <!-- NETWORK MODULE -->
+          <div class="module-group">
+            <div class="group-label">ONLINE BRIDGE (ON RECONNECT)</div>
+            <div class="component-card purple-accent" id="mod-dio-client">
+              <div class="component-top">
+                <span class="component-title">DIO HTTP CLIENT</span>
+                <span class="tech-tag">dio</span>
+              </div>
+              <div class="component-desc">Background job detects connectivity, synchronizes local ledger delta, and fetches fresh token batch.</div>
+            </div>
+
+            <div class="component-card purple-accent" id="mod-razorpay-sdk">
+              <div class="component-top">
+                <span class="component-title">RAZORPAY SDK</span>
+                <span class="tech-tag">razorpay_flutter</span>
+              </div>
+              <div class="component-desc">Top-up wallet via UPI/NetBanking or perform instant Online Tier-1 transactions when net is present.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- COLUMN 2: VENDOR SOUNDBOX (Rectangular Silhouette) -->
+        <div class="device-column soundbox-silhouette" id="device-vendor-soundbox">
+          <div class="device-header">
+            <div class="device-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary-yellow)" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+              VENDOR SOUNDBOX
+            </div>
+            <div class="device-sub" style="color:var(--teal-accent)">IOT EMBEDDED / ANDROID KIOSK</div>
+          </div>
+
+          <!-- RECEPTION -->
+          <div class="module-group">
+            <div class="group-label">RECEPTION FRONTEND</div>
+            <div class="component-card teal-accent" id="mod-sb-mic">
+              <div class="component-top">
+                <span class="component-title">MIC LISTENER (PRIMARY)</span>
+                <span class="tech-tag">flutter_sound</span>
+              </div>
+              <div class="component-desc">Always-on acoustic frontend. 18–22kHz digital bandpass filter decodes FSK ultrasonic payload within 200ms.</div>
+            </div>
+
+            <div class="component-card teal-accent" id="mod-sb-ble">
+              <div class="component-top">
+                <span class="component-title">BLE SCANNER (FALLBACK)</span>
+                <span class="tech-tag">flutter_blue_plus</span>
+              </div>
+              <div class="component-desc">Active scan triggers automatically if acoustic ACK isn't completed within 3.0 seconds.</div>
+            </div>
+          </div>
+
+          <!-- VERIFICATION -->
+          <div class="module-group">
+            <div class="group-label">EDGE CRYPTOGRAPHIC VERIFICATION</div>
+            <div class="component-card teal-accent" id="mod-sb-verifier">
+              <div class="component-top">
+                <span class="component-title">ECDSA VERIFIER</span>
+                <span class="tech-tag">pointycastle secp256k1</span>
+              </div>
+              <div class="component-desc">Verifies <code>payer_signature</code> using pre-loaded server public key. Quad-check verification:
+                <br>1. Signature valid & matches public key
+                <br>2. Timestamp window strictly within ±5 mins
+                <br>3. Nonce unseen in local history (anti-replay)
+                <br>4. Token expiry timestamp unelapsed
+              </div>
+              <div class="security-pill" style="border-color:var(--teal-accent); color:var(--teal-accent)">⚡ &lt;80ms VERIFICATION</div>
+            </div>
+          </div>
+
+          <!-- CONFIRMATION -->
+          <div class="module-group">
+            <div class="group-label">LOCAL ANNOUNCEMENT & DISPLAY</div>
+            <div class="component-card teal-accent" id="mod-sb-tts">
+              <div class="component-top">
+                <span class="component-title">TTS ANNOUNCER</span>
+                <span class="tech-tag">flutter_tts</span>
+              </div>
+              <div class="component-desc">Voice synthesizer immediately shouts: <em>"CampusPay se ₹X mila"</em> in regional Hindi/English.</div>
+            </div>
+
+            <div class="component-card teal-accent" id="mod-sb-display">
+              <div class="component-top">
+                <span class="component-title">DISPLAY SCREEN</span>
+                <span class="tech-tag">TFT / OLED UI</span>
+              </div>
+              <div class="component-desc">Visual receipt: ✅ ₹X | Student Name | Timestamp | Txn Hash ID.</div>
+            </div>
+
+            <div class="component-card teal-accent" id="mod-sb-qr-scan">
+              <div class="component-top">
+                <span class="component-title">RECEIPT QR SCAN</span>
+                <span class="tech-tag">Optical Fallback</span>
+              </div>
+              <div class="component-desc">Optional vendor camera scan of student receipt QR. Enables independent offline ECDSA verify.</div>
+            </div>
+          </div>
+
+          <!-- STORAGE + SYNC -->
+          <div class="module-group">
+            <div class="group-label">STORAGE & TELEMETRY</div>
+            <div class="component-card teal-accent" id="mod-sb-ledger">
+              <div class="component-top">
+                <span class="component-title">LOCAL LEDGER</span>
+                <span class="tech-tag">sqflite</span>
+              </div>
+              <div class="component-desc">Append-only local log: <code>token_id, amount, payer_id, timestamp, verified_status</code>.</div>
+            </div>
+
+            <div class="component-card teal-accent" id="mod-sb-wifi">
+              <div class="component-top">
+                <span class="component-title">WIFI SYNC</span>
+                <span class="tech-tag">dio</span>
+              </div>
+              <div class="component-desc">Continuous background daemon pushes credit log to server via DBIT campus Wi-Fi whenever online.</div>
+            </div>
+
+            <div class="component-card teal-accent" id="mod-sb-kiosk">
+              <div class="component-top">
+                <span class="component-title">KIOSK LOCK</span>
+                <span class="tech-tag">Android Task Locking API</span>
+              </div>
+              <div class="component-desc">Permanent foreground pin. Prevents app exit, tampering, or malicious OS interruption.</div>
+            </div>
+          </div>
+
+          <!-- Speaker Grille at bottom of SoundBox -->
+          <div class="soundbox-grille-banner">
+            <div class="speaker-holes">
+              <div class="speaker-dot"></div><div class="speaker-dot"></div><div class="speaker-dot"></div>
+              <div class="speaker-dot"></div><div class="speaker-dot"></div><div class="speaker-dot"></div>
+              <div class="speaker-dot"></div><div class="speaker-dot"></div><div class="speaker-dot"></div>
+            </div>
+            <div class="soundbox-audio-label">"CampusPay se ₹X mila 🔊"</div>
+          </div>
+        </div>
+
+        <!-- COLUMN 3: ADMIN PANEL (Laptop / Monitor Silhouette) -->
+        <div class="device-column admin-silhouette" id="device-admin-panel">
+          <div class="device-header">
+            <div class="device-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--light-purple)" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              ADMIN PANEL
+            </div>
+            <div class="device-sub" style="color:var(--primary-yellow)">REACT / VITE WEB CONSOLE</div>
+          </div>
+
+          <!-- MERCHANT MANAGEMENT -->
+          <div class="module-group">
+            <div class="group-label">MERCHANT MANAGEMENT</div>
+            <div class="component-card admin-white-card" id="mod-admin-merchants">
+              <div class="component-top">
+                <span class="component-title">MERCHANT ONBOARDING</span>
+                <span class="tech-tag">Admin API</span>
+              </div>
+              <div class="component-desc">Register canteen & store vendors; generate dynamic static QR; assign SoundBox BLE beacon IDs; provision ECDSA public keys onto physical SoundBoxes.</div>
+            </div>
+          </div>
+
+          <!-- USER MANAGEMENT -->
+          <div class="module-group">
+            <div class="group-label">IDENTITY & GOVERNANCE</div>
+            <div class="component-card admin-white-card" id="mod-admin-users">
+              <div class="component-top">
+                <span class="component-title">USER & FACULTY MGMT</span>
+                <span class="tech-tag">RBAC</span>
+              </div>
+              <div class="component-desc">Register students + faculty; map DBIT Roll Numbers / Smart IDs; enforce daily offline spending ceilings (e.g. ₹500/day).</div>
+            </div>
+          </div>
+
+          <!-- MONITORING & FRAUD -->
+          <div class="module-group">
+            <div class="group-label">RECONCILIATION & MONITORING</div>
+            <div class="component-card admin-white-card" id="mod-admin-monitoring">
+              <div class="component-top">
+                <span class="component-title">LIVE TRANSACTION FEED</span>
+                <span class="tech-tag">WebSocket / SSE</span>
+              </div>
+              <div class="component-desc">Real-time telemetry of transactions transitioning from <code>PENDING</code> → <code>RECONCILED</code> → <code>SETTLED</code>.</div>
+            </div>
+
+            <div class="component-card admin-white-card" id="mod-admin-reconcile">
+              <div class="component-top">
+                <span class="component-title">RECONCILIATION DASHBOARD</span>
+                <span class="tech-tag">Audit Engine</span>
+              </div>
+              <div class="component-desc">Token_id cross-matcher view. Mismatches or unpaired single-side debits immediately highlighted in red for triage.</div>
+            </div>
+
+            <div class="component-card admin-white-card" id="mod-admin-fraud">
+              <div class="component-top">
+                <span class="component-title">FRAUD DETECTION SUITE</span>
+                <span class="tech-tag">Security Ops</span>
+              </div>
+              <div class="component-desc">Duplicate token flags, expired token alert triggers, and client balance rollback detectors.</div>
+            </div>
+          </div>
+
+          <!-- FINANCE & SETTLEMENT -->
+          <div class="module-group">
+            <div class="group-label">FINANCIAL CLEARING</div>
+            <div class="component-card admin-white-card" id="mod-admin-finance">
+              <div class="component-top">
+                <span class="component-title">MERCHANT PAYOUT ENGINE</span>
+                <span class="tech-tag">Bank Payout API</span>
+              </div>
+              <div class="component-desc">Daily batch payouts via IMPS/NEFT from DBIT nodal escrow account to vendor business bank accounts on approval.</div>
+            </div>
+
+            <div class="component-card admin-white-card" id="mod-admin-coins">
+              <div class="component-top">
+                <span class="component-title">CAMPUSCOINS CONTROLLER</span>
+                <span class="tech-tag">Loyalty Rails</span>
+              </div>
+              <div class="component-desc">Configure earn rates, streak multipliers, and redeem exchange rate caps across DBIT vendors.</div>
+            </div>
+          </div>
+
+          <!-- ANALYTICS -->
+          <div class="module-group">
+            <div class="group-label">ANALYTICS & REPORTING</div>
+            <div class="component-card admin-white-card" id="mod-admin-analytics">
+              <div class="component-top">
+                <span class="component-title">CAMPUS TELEMETRY</span>
+                <span class="tech-tag">Chart.js / SQL</span>
+              </div>
+              <div class="component-desc">Aggregated metrics: daily volume, top canteens, peak lunch rush throughput, and offline vs online payment ratio.</div>
+            </div>
+          </div>
+
+          <div class="monitor-stand"></div>
+        </div>
+
+      </div>
+
+      <!-- ========================================================= -->
+      <!-- LAYER 2 — COMMUNICATION CHANNELS BAND -->
+      <!-- ========================================================= -->
+      <div class="layer-divider">
+        <div class="layer-tag">LAYER 2 — COMMUNICATION CHANNELS</div>
+        <div class="layer-line"></div>
+        <div class="layer-subtext">MULTI-CARRIER AIRGAP MESH • ZERO-CELLULAR FALLBACK RAILS</div>
+      </div>
+
+      <div class="channels-band-container" id="layer-channels">
+        <div class="channels-grid">
+
+          <!-- CHANNEL 1: ULTRASONIC -->
+          <div class="channel-card" id="channel-sound">
+            <div class="channel-pill-label">🔊 18–22kHz FSK ULTRASONIC</div>
+            <div class="channel-details">
+              <strong>STATUS: PRIMARY CARRIER</strong><br>
+              • Range: <strong>30cm to 1m</strong> line-of-sight<br>
+              • Vector: <strong>Student Phone Speaker → SoundBox Mic</strong><br>
+              • Acoustic Return: <strong>Instant Acoustic ACK Tone</strong> from SoundBox speaker back to phone mic.
+            </div>
+            <!-- Interactive Visual SVG -->
+            <div class="channel-visual-canvas">
+              <svg width="100%" height="100%" viewBox="0 0 320 100">
+                <path d="M 30 50 Q 80 15, 130 50 T 230 50 T 290 50" fill="none" stroke="var(--primary-yellow)" stroke-width="2.5" stroke-dasharray="8 4" class="wave-line"/>
+                <path d="M 40 50 Q 90 25, 140 50 T 240 50 T 280 50" fill="none" stroke="var(--primary-yellow)" stroke-width="1.5" opacity="0.6"/>
+                <!-- Speaker Icon -->
+                <circle cx="30" cy="50" r="14" fill="#222" stroke="var(--primary-yellow)" stroke-width="1.5"/>
+                <text x="24" y="54" fill="#FFE500" font-size="12">📢</text>
+                <!-- Mic Icon -->
+                <circle cx="290" cy="50" r="14" fill="#222" stroke="var(--primary-yellow)" stroke-width="1.5"/>
+                <text x="284" y="54" fill="#FFE500" font-size="12">🎙️</text>
+                <!-- Direction Arrows -->
+                <text x="120" y="32" fill="#FFE500" font-size="10" font-family="'JetBrains Mono', monospace">18-22kHz FSK BURST →</text>
+                <text x="110" y="80" fill="#22C55E" font-size="10" font-family="'JetBrains Mono', monospace">← ACOUSTIC ACK RETURN</text>
+                <path d="M 270 68 L 50 68" fill="none" stroke="var(--success-green)" stroke-width="1.5" stroke-dasharray="4 4"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- CHANNEL 2: BLE BROADCAST -->
+          <div class="channel-card ble" id="channel-ble">
+            <div class="channel-pill-label">📶 BLE ADVERTISEMENT</div>
+            <div class="channel-details">
+              <strong>STATUS: AUTOMATIC FALLBACK</strong><br>
+              • Triggers after <strong>3s without Acoustic ACK</strong><br>
+              • Range: <strong>10–30 meters</strong> broadcast sphere<br>
+              • Non-paired BLE service advertising payload hash<br>
+              • Dual capability: Vendor POS & <strong>P2P Student Mesh</strong>
+            </div>
+            <!-- Interactive Visual SVG -->
+            <div class="channel-visual-canvas">
+              <svg width="100%" height="100%" viewBox="0 0 320 100">
+                <path d="M 30 75 C 90 10, 230 10, 290 75" fill="none" stroke="var(--light-purple)" stroke-width="2" stroke-dasharray="4 4"/>
+                <circle cx="160" cy="30" r="4" fill="var(--light-purple)" class="signal-dot"/>
+                <circle cx="30" cy="75" r="12" fill="#222" stroke="var(--light-purple)" stroke-width="1.5"/>
+                <circle cx="290" cy="75" r="12" fill="#222" stroke="var(--light-purple)" stroke-width="1.5"/>
+                <text x="80" y="24" fill="var(--light-purple)" font-size="10" font-family="'JetBrains Mono', monospace">BLE ADVERT (FALLBACK 3s)</text>
+                <text x="90" y="88" fill="#AAA" font-size="10" font-family="'JetBrains Mono', monospace">BIDIRECTIONAL P2P ARC</text>
+              </svg>
+            </div>
+          </div>
+
+          <!-- CHANNEL 3: USSD SILENT SESSION -->
+          <div class="channel-card ussd" id="channel-ussd">
+            <div class="channel-pill-label">⚡ *99# SILENT USSD</div>
+            <div class="channel-details">
+              <strong>STATUS: ZERO-DATA BANK RAILS</strong><br>
+              • <strong>Cellular voice signal only</strong> — zero internet<br>
+              • TelephonyManager runs silent background session<br>
+              • Direct bank-to-bank debit via NPCI *99# gateway<br>
+              • User interacts solely with CampusPay UI; MPIN secure
+            </div>
+            <!-- Interactive Visual SVG -->
+            <div class="channel-visual-canvas">
+              <svg width="100%" height="100%" viewBox="0 0 320 100">
+                <path d="M 40 80 L 160 25 L 280 80" fill="none" stroke="var(--amber-accent)" stroke-width="2" stroke-dasharray="5 3"/>
+                <!-- Tower -->
+                <circle cx="160" cy="25" r="12" fill="#222" stroke="var(--amber-accent)" stroke-width="1.5"/>
+                <text x="153" y="29" font-size="12">📡</text>
+                <!-- Bank -->
+                <circle cx="280" cy="80" r="12" fill="#222" stroke="var(--amber-accent)" stroke-width="1.5"/>
+                <text x="274" y="84" font-size="12">🏛️</text>
+                <!-- Phone -->
+                <circle cx="40" cy="80" r="12" fill="#222" stroke="var(--amber-accent)" stroke-width="1.5"/>
+                <text x="34" y="84" font-size="12">📱</text>
+                <text x="75" y="48" fill="var(--amber-accent)" font-size="9.5" font-family="'JetBrains Mono', monospace">*99# GSM SIGNAL</text>
+                <text x="195" y="48" fill="var(--amber-accent)" font-size="9.5" font-family="'JetBrains Mono', monospace">NPCI BANK DEBIT</text>
+              </svg>
+            </div>
+          </div>
+
+          <!-- CHANNEL 4: HTTPS REST -->
+          <div class="channel-card rest" id="channel-rest">
+            <div class="channel-pill-label">🔒 HTTPS / REST SYNC</div>
+            <div class="channel-details">
+              <strong>STATUS: ASYNCHRONOUS RECONCILER</strong><br>
+              • Online only when college Wi-Fi / 5G connects<br>
+              • Dual-ledger synchronizer: Student debits & Vendor credits<br>
+              • ECDSA token replenishment + Admin operations<br>
+              • Razorpay webhook ingestion & settlement triggers
+            </div>
+            <!-- Interactive Visual SVG -->
+            <div class="channel-visual-canvas">
+              <svg width="100%" height="100%" viewBox="0 0 320 100">
+                <line x1="60" y1="25" x2="260" y2="25" stroke="#FFFFFF" stroke-width="2" stroke-dasharray="6 4"/>
+                <line x1="260" y1="75" x2="60" y2="75" stroke="#FFFFFF" stroke-width="2" stroke-dasharray="6 4"/>
+                <polygon points="265,25 255,20 255,30" fill="#FFFFFF"/>
+                <polygon points="55,75 65,70 65,80" fill="#FFFFFF"/>
+                <text x="70" y="45" fill="#FFFFFF" font-size="10" font-family="'JetBrains Mono', monospace">STUDENT DEBIT SYNC ➔</text>
+                <text x="80" y="66" fill="var(--primary-yellow)" font-size="10" font-family="'JetBrains Mono', monospace">▲ RECONCILIATION SWEEP ▼</text>
+              </svg>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- SEPARATE MINI FLOW: P2P STUDENT-TO-STUDENT TRANSFER -->
+        <div class="p2p-mini-flow-box" id="p2p-flow-section">
+          <div class="p2p-header-wrap">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span class="p2p-badge">P2P TRANSFER ENGINE</span>
+              <span style="font-family:'JetBrains Mono'; font-size:11px; color:var(--light-purple);">OFFLINE DEVICE-TO-DEVICE SETTLEMENT PROTOCOL</span>
+            </div>
+            <span style="font-family:'JetBrains Mono'; font-size:11px; color:var(--success-green);">TWO-PHASE COMMIT WITH ACOUSTIC ACK</span>
+          </div>
+
+          <div class="p2p-flow-columns">
+            <!-- SENDER PHONE -->
+            <div class="p2p-peer-box">
+              <div class="p2p-peer-title">📱 SENDER PHONE</div>
+              <div class="p2p-peer-step">• User enters ₹200 for peer</div>
+              <div class="p2p-peer-step">• Generates signed P2P payload: <code>{sender_id, amount, nonce, signature}</code></div>
+              <div class="p2p-peer-step" style="color:var(--primary-yellow)">• Emits ultrasonic burst + BLE advertisement</div>
+              <div class="p2p-peer-step" style="color:var(--success-green); font-weight:600">• <strong>ONLY UPON RECEIVING ACOUSTIC ACK:</strong> Deducts ₹200 from wallet, logs debit in SQLite</div>
+              <div class="p2p-peer-step">• Displays ✅ ₹200 Sent receipt</div>
+            </div>
+
+            <!-- AIRGAP SIGNALS -->
+            <div class="p2p-center-signals">
+              <div class="signal-pill-arrow">
+                <span>[ULTRASONIC 18-22kHz BURST]</span> ➔
+              </div>
+              <div class="signal-pill-arrow">
+                <span>[SIMULTANEOUS BLE ADVERT]</span> ➔
+              </div>
+              <div class="signal-pill-arrow ack">
+                ◀ <span>[ACOUSTIC ACK TONE CONFIRMATION]</span>
+              </div>
+            </div>
+
+            <!-- RECEIVER PHONE -->
+            <div class="p2p-peer-box">
+              <div class="p2p-peer-title">📱 RECEIVER PHONE</div>
+              <div class="p2p-peer-step">• Mic / BLE catches airgap payload</div>
+              <div class="p2p-peer-step">• Decodes + verifies sender's ECDSA signature locally</div>
+              <div class="p2p-peer-step">• Logs ₹200 credit in receiver's SQLite ledger</div>
+              <div class="p2p-peer-step" style="color:var(--success-green); font-weight:600">• Emits high-frequency acoustic ACK burst back to sender</div>
+              <div class="p2p-peer-step">• Shows ✅ ₹200 Received notification</div>
+            </div>
+          </div>
+
+          <div style="margin-top:10px; font-family:'JetBrains Mono'; font-size:10.5px; color:var(--muted-text); display:flex; justify-content:space-between; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px;">
+            <span>🔄 RECONNECT STAGE: Both devices upload SQLite transaction logs on next Wi-Fi sync.</span>
+            <span>⚖️ SERVER RECONCILER: Matches nonce & signature pair; awards CampusCoins to sender.</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ========================================================= -->
+      <!-- LAYER 3 — BACKEND SERVER (Full Width Bottom) -->
+      <!-- ========================================================= -->
+      <div class="layer-divider">
+        <div class="layer-tag">LAYER 3 — BACKEND SERVER</div>
+        <div class="layer-line"></div>
+        <div class="layer-subtext">HIGH-CONCURRENCY SETTLEMENT CORE • NODAL ESCROW LEDGER</div>
+      </div>
+
+      <div class="backend-server-container" id="layer-backend">
+        
+        <div class="server-top-meta">
+          <div class="server-title-group">
+            <h2>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary-yellow)" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+              CAMPUSPAY HIGH-CONCURRENCY BACKEND CLUSTER
+            </h2>
+            <p>Cryptographic token authority, asynchronous dual-ledger reconciler, and campus settlement daemon</p>
+          </div>
+          <div class="server-tech-specs">
+            <div class="stack-line">Node.js 20 LTS + Express.js Engine</div>
+            <div class="infra-line">Deployed on Railway.app / AWS EC2 Mumbai Region</div>
+          </div>
+        </div>
+
+        <!-- 3x3 MODULE GRID -->
+        <div class="server-modules-grid">
+
+          <!-- ROW 1 -->
+          <div class="server-module-card" id="srv-wallet-engine">
+            <div class="server-card-header">
+              <span class="server-module-title">WALLET ENGINE</span>
+              <span class="tech-tag">Nodal Escrow</span>
+            </div>
+            <div class="server-card-body">
+              Razorpay webhook receiver; credits student campus wallet upon verified UPI top-up. Manages college nodal bank account balance and reserves.
+            </div>
+          </div>
+
+          <div class="server-module-card" id="srv-token-service">
+            <div class="server-card-header">
+              <span class="server-module-title">TOKEN SIGNING SERVICE</span>
+              <span class="tech-tag">ECDSA secp256k1</span>
+            </div>
+            <div class="server-card-body">
+              Generates batch of 10 cryptographic pre-auth tokens per request. Each token includes: <code>token_id + wallet_id + max_amount + expiry + server_signature</code>.
+            </div>
+            <div class="security-pill">🔑 SERVER SIGNED BATCH</div>
+          </div>
+
+          <div class="server-module-card" id="srv-sync-endpoint">
+            <div class="server-card-header">
+              <span class="server-module-title">SYNC ENDPOINT</span>
+              <span class="tech-tag">REST Ingestion</span>
+            </div>
+            <div class="server-card-body">
+              Receives student app encrypted ledger deltas & Vendor SoundBox credit batches. Queues payloads into Redis stream for instant asynchronous reconciliation.
+            </div>
+          </div>
+
+          <!-- ROW 2 -->
+          <div class="server-module-card" id="srv-recon-engine">
+            <div class="server-card-header">
+              <span class="server-module-title">RECONCILIATION ENGINE</span>
+              <span class="tech-tag">node-cron Scheduler</span>
+            </div>
+            <div class="server-card-body">
+              High-frequency sweep matches <code>token_id</code> in student debit journal AND SoundBox credit log. <strong>Both records must exist</strong> for official transaction clearing.
+            </div>
+            <div class="security-pill">🔒 DUAL LEDGER REQUIRED</div>
+          </div>
+
+          <div class="server-module-card" id="srv-fraud-detection">
+            <div class="server-card-header">
+              <span class="server-module-title">FRAUD DETECTION</span>
+              <span class="tech-tag">Anomaly Guardian</span>
+            </div>
+            <div class="server-card-body">
+              • Duplicate <code>token_id</code> reuse attempt ➔ Instant flag<br>
+              • Expired token presented ➔ Automatic rejection<br>
+              • Nonce replay attempt ➔ Permanent hardware block<br>
+              • Balance mismatch ➔ Freeze account & alert admin
+            </div>
+          </div>
+
+          <div class="server-module-card" id="srv-settlement-engine">
+            <div class="server-card-header">
+              <span class="server-module-title">SETTLEMENT ENGINE</span>
+              <span class="tech-tag">IMPS / NEFT Rails</span>
+            </div>
+            <div class="server-card-body">
+              Credits merchant CampusPay wallet balance immediately upon reconciliation. Triggers daily automated IMPS/NEFT payouts directly to merchant bank accounts on admin sign-off.
+            </div>
+          </div>
+
+          <!-- ROW 3 -->
+          <div class="server-module-card" id="srv-campuscoins-engine">
+            <div class="server-card-header">
+              <span class="server-module-title">CAMPUSCOINS ENGINE</span>
+              <span class="tech-tag">Loyalty Logic</span>
+            </div>
+            <div class="server-card-body">
+              • Earn: <strong>2 coins per ₹10</strong> at canteen; <strong>1 coin per ₹10</strong> P2P<br>
+              • Bonuses: 3 separate vendors in 1 day = <strong>+20 coins</strong>; 5-day streak = <strong>+50 coins</strong><br>
+              • Redemption: <strong>10 coins = ₹1</strong> discount at vendor checkout
+            </div>
+          </div>
+
+          <div class="server-module-card" id="srv-auth-service">
+            <div class="server-card-header">
+              <span class="server-module-title">JWT AUTH + BCRYPT</span>
+              <span class="tech-tag">Stateless Auth</span>
+            </div>
+            <div class="server-card-body">
+              Issues short-lived RS256 JWT access tokens to mobile clients upon student login. Salted Bcrypt hashing for credential vaults and role permissions.
+            </div>
+          </div>
+
+          <div class="server-module-card" id="srv-admin-api">
+            <div class="server-card-header">
+              <span class="server-module-title">ADMIN API</span>
+              <span class="tech-tag">Control Plane</span>
+            </div>
+            <div class="server-card-body">
+              REST & WebSocket interfaces for vendor registration, student wallet limits adjustment, campus telemetry aggregation, and manual payout approvals.
+            </div>
+          </div>
+
+        </div>
+
+        <!-- DATABASE & CACHE PERSISTENCE LAYER -->
+        <div class="server-db-footer">
+          <div class="db-title-row">
+            <div class="db-main-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary-yellow)" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+              DATABASE SUBSYSTEM — MySQL 8.0 CLUSTER
+            </div>
+            <span class="db-orm-badge">Sequelize ORM • Strict ACID Transactions • Multi-AZ Replication</span>
+          </div>
+
+          <div class="tables-pills-wrap">
+            <span class="db-table-pill">users</span>
+            <span class="db-table-pill">wallets</span>
+            <span class="db-table-pill">tokens</span>
+            <span class="db-table-pill">transactions</span>
+            <span class="db-table-pill">soundbox_log</span>
+            <span class="db-table-pill">reconciliation_audit</span>
+            <span class="db-table-pill">merchants</span>
+            <span class="db-table-pill">campus_coins</span>
+            <span class="db-table-pill">p2p_transfers</span>
+            <span class="db-table-pill">sync_queue</span>
+          </div>
+
+          <div class="redis-row">
+            <span class="redis-badge">REDIS 7</span>
+            <div class="redis-desc">
+              High-throughput in-memory tier: <span>Token Batch Cache</span> • <span>Rate Limiting (Token Bucket)</span> • <span>Session Store</span> • <span>Real-time Ingestion Streams</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ========================================================= -->
+      <!-- FLOATING SECURITY CALLOUT BOXES -->
+      <!-- ========================================================= -->
+      <div class="security-callouts-grid">
+        <div class="callout-box" id="sec-aes">
+          <div class="callout-header">🔐 AES-256 GCM</div>
+          <div class="callout-target">Target: Campus Wallet</div>
+          <div class="callout-quote">"Balance encrypted at rest on device with OS hardware keystore wrapping."</div>
+        </div>
+
+        <div class="callout-box" id="sec-ecdsa">
+          <div class="callout-header">🔑 ECDSA secp256k1</div>
+          <div class="callout-target">Target: Signer + Verifier</div>
+          <div class="callout-quote">"Asymmetric signing — device private key never leaves secure enclave."</div>
+        </div>
+
+        <div class="callout-box" id="sec-nonce">
+          <div class="callout-header">🎲 UUID NONCE</div>
+          <div class="callout-target">Target: Payment Payload</div>
+          <div class="callout-quote">"Unique cryptographically random UUID per payment — replay attack impossible."</div>
+        </div>
+
+        <div class="callout-box" id="sec-singleuse">
+          <div class="callout-header">1️⃣ SINGLE USE TOKEN</div>
+          <div class="callout-target">Target: Token Store</div>
+          <div class="callout-quote">"Token marked USED locally before airgap transmission — cannot be spent twice."</div>
+        </div>
+
+        <div class="callout-box" id="sec-expiry">
+          <div class="callout-header">⏱ 48HR EXPIRY</div>
+          <div class="callout-target">Target: Pre-Auth Tokens</div>
+          <div class="callout-quote">"Forces regular online check-in and guarantees minimal risk window."</div>
+        </div>
+
+        <div class="callout-box" id="sec-dual-ledger">
+          <div class="callout-header">🔒 DUAL LEDGER</div>
+          <div class="callout-target">Target: Reconciliation Engine</div>
+          <div class="callout-quote">"Token_id must appear in BOTH student + SoundBox logs — neither party can fake the other."</div>
+        </div>
+
+        <div class="callout-box" id="sec-mpin">
+          <div class="callout-header">🤫 MPIN SAFE</div>
+          <div class="callout-target">Target: USSD Interface</div>
+          <div class="callout-quote">"MPIN goes directly to GSM *99# session — never stored, never sent over IP."</div>
+        </div>
+
+        <div class="callout-box" id="sec-kiosk">
+          <div class="callout-header">🛡️ KIOSK SECURED</div>
+          <div class="callout-target">Target: SoundBox Hardware</div>
+          <div class="callout-quote">"Permanent foreground pinning via Android Device Admin API prevents user override."</div>
+        </div>
+      </div>
+
+      <!-- ========================================================= -->
+      <!-- FOOTER & COLOR CODED ARCHITECTURE LEGEND -->
+      <!-- ========================================================= -->
+      <footer class="poster-footer">
+        <div class="legend-container">
+          <span class="legend-title">DIAGRAM COLOR KEY:</span>
+          <div class="legend-item">
+            <span class="legend-swatch swatch-purple"></span>
+            <span>#6B21A8 Crypto / Enclave</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-swatch swatch-yellow"></span>
+            <span>#FFE500 Active Payment Flow</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-swatch swatch-white"></span>
+            <span>#FFFFFF Data & Persistence</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-swatch swatch-green"></span>
+            <span>#22C55E Confirmed / Settled</span>
+          </div>
+        </div>
+
+        <div class="footer-copyright">
+          DESIGNED FOR DON BOSCO INSTITUTE OF TECHNOLOGY (DBIT MUMBAI)<br>
+          CONFIDENTIAL • INTERNAL ARCHITECTURE REFERENCE SPECIFICATION
+        </div>
+      </footer>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let isSimulating = false;
+  let pulseInterval = null;
+  let currentSimStep = 1;
+
+  // Step highlight mapping
+  const stepComponents = {
+    1: ['mod-token-store', 'mod-campus-wallet', 'srv-token-service', 'channel-rest'],
+    2: ['mod-qr-scanner', 'mod-ble-broadcaster', 'mod-sb-ble'],
+    3: ['mod-amount-entry', 'mod-ecdsa-signer', 'mod-campus-wallet', 'mod-student-ledger', 'sec-nonce'],
+    4: ['mod-sound-emitter', 'mod-ble-broadcaster', 'channel-sound', 'channel-ble'],
+    5: ['mod-sb-mic', 'mod-sb-ble', 'channel-sound'],
+    6: ['mod-sb-verifier', 'sec-ecdsa', 'sec-expiry'],
+    7: ['mod-sb-tts', 'mod-sb-display', 'mod-receipt-gen', 'tier-offline'],
+    8: ['srv-recon-engine', 'srv-fraud-detection', 'srv-settlement-engine', 'srv-campuscoins-engine', 'channel-rest', 'sec-dual-ledger']
+  };
+
+  function clearHighlights() {
+    document.querySelectorAll('.highlight-active').forEach(el => el.classList.remove('highlight-active'));
+    document.querySelectorAll('.flow-step-item').forEach(el => el.classList.remove('active'));
+  }
+
+  function highlightStep(stepNum) {
+    clearHighlights();
+    const stepEl = document.getElementById(`step-${stepNum}`);
+    if (stepEl) stepEl.classList.add('active');
+
+    const ids = stepComponents[stepNum] || [];
+    ids.forEach(id => {
+      const target = document.getElementById(id);
+      if (target) {
+        target.classList.add('highlight-active');
+      }
+    });
+  }
+
+  function togglePulse() {
+    isSimulating = !isSimulating;
+    const status = document.getElementById('pulseStatus');
+    if (isSimulating) {
+      status.innerText = '⏸ PAUSE SIMULATION';
+      currentSimStep = 1;
+      highlightStep(currentSimStep);
+      pulseInterval = setInterval(() => {
+        currentSimStep = (currentSimStep % 8) + 1;
+        highlightStep(currentSimStep);
+      }, 1600);
+    } else {
+      status.innerText = '⚡ SIMULATE FLOWS';
+      clearInterval(pulseInterval);
+      clearHighlights();
+    }
+  }
+
+  function setFilter(type) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    clearHighlights();
+
+    if (type === 'all') {
+      document.querySelectorAll('.device-column, .channels-band-container, .backend-server-container, .callout-box, .p2p-mini-flow-box').forEach(el => {
+        el.style.opacity = '1';
+        el.style.filter = 'none';
+      });
+      return;
+    }
+
+    // Dim non-matching elements
+    document.querySelectorAll('.device-column, .channel-card, .server-module-card, .callout-box, .p2p-mini-flow-box').forEach(el => {
+      el.style.opacity = '0.25';
+      el.style.filter = 'grayscale(60%)';
+    });
+
+    if (type === 'offline') {
+      highlightElements(['device-student-app', 'device-vendor-soundbox', 'channel-sound', 'channel-ble', 'mod-sound-emitter', 'mod-sb-mic', 'mod-sb-verifier', 'tier-offline']);
+    } else if (type === 'p2p') {
+      highlightElements(['p2p-flow-section', 'channel-ble', 'channel-sound', 'mod-mic-listener', 'mod-ecdsa-signer']);
+    } else if (type === 'ussd') {
+      highlightElements(['tier-ussd', 'channel-ussd', 'mod-ussd-interface', 'sec-mpin']);
+    } else if (type === 'security') {
+      document.querySelectorAll('.callout-box').forEach(el => {
+        el.style.opacity = '1';
+        el.style.filter = 'none';
+        el.classList.add('highlight-active');
+      });
+      highlightElements(['mod-campus-wallet', 'mod-token-store', 'mod-ecdsa-signer', 'mod-sb-verifier', 'srv-recon-engine', 'srv-fraud-detection']);
+    }
+  }
+
+  function highlightElements(ids) {
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.style.opacity = '1';
+        el.style.filter = 'none';
+        el.classList.add('highlight-active');
+      }
+    });
+  }
+</script>
+
+</body>
+</html>
