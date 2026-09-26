@@ -8,6 +8,7 @@ CampusPay guarantees zero-latency, fail-safe transactions even in zero-connectiv
 
 ## 📚 Project Documentation
 
+- **[CONTRIBUTING.md](file:///Users/manyashah/StudioProjects/CampusPay/CONTRIBUTING.md)**: Fork & Pull policy, git workflow, coding standards, and PR requirements.
 - **[CHANGELOG.md](file:///Users/manyashah/StudioProjects/CampusPay/CHANGELOG.md)**: Full history of engineering updates, Stitch "Neon White" design system migration, downloaded asset references, and future maintenance guidelines.
 - **[ARCHITECTURE.md](file:///Users/manyashah/StudioProjects/CampusPay/ARCHITECTURE.md)**: Deep dive into the tri-tier payment rails, cryptographic pre-auth pool, and dual-ledger asynchronous sync.
 - **[`campuspay_architecture_poster.html`](file:///Users/manyashah/StudioProjects/CampusPay/campuspay_architecture_poster.html)**: Interactive visual blueprint of the complete CampusPay hardware & cloud ecosystem.
@@ -48,3 +49,20 @@ adb connect <PHONE_IP>:<PORT>
 # Run on target phone
 flutter run -d <DEVICE_ID>
 ```
+
+---
+
+## 🤝 Contributing (Fork & Pull Model)
+
+We welcome community contributions! CampusPay strictly enforces the **Fork & Pull Policy**:
+1. **Fork** this repository to your personal GitHub account.
+2. Clone your fork and create a topic branch: `git checkout -b feature/amazing-feature`.
+3. Ensure all code passes `flutter analyze` with **0 issues**.
+4. Push to your fork and submit a **Pull Request** targeting `upstream:main`.
+
+For detailed guidelines, see **[CONTRIBUTING.md](file:///Users/manyashah/StudioProjects/CampusPay/CONTRIBUTING.md)**.
+
+---
+
+## 📄 License
+Licensed under the [MIT License](file:///Users/manyashah/StudioProjects/CampusPay/LICENSE).

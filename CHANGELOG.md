@@ -8,7 +8,7 @@ This document adheres to [Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 
 ## 📖 How to Maintain This Document (Future Reference Guide)
 
-When you make changes to CampusPay in the future, follow this standard procedure to keep this document up to date:
+When contributing or making changes to CampusPay in the future, follow the [Fork & Pull Model in CONTRIBUTING.md](file:///Users/manyashah/StudioProjects/CampusPay/CONTRIBUTING.md) and use this standard procedure to keep this document up to date:
 
 ### 1. Versioning Convention
 - **Major (`X.0.0`)**: Breaking architectural changes (e.g., changing offline token crypto protocol, complete navigation rewrite).
