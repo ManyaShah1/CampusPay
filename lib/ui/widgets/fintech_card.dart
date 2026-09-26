@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 
+/// Base card widget — rounded-16, optional left accent bar, optional glow
 class FintechCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
@@ -8,27 +9,34 @@ class FintechCard extends StatelessWidget {
   final double leftBorderWidth;
   final VoidCallback? onTap;
   final Color backgroundColor;
+  final List<BoxShadow>? glow;
+  final double borderRadius;
 
   const FintechCard({
     super.key,
     required this.child,
     this.padding,
     this.leftBorderColor,
-    this.leftBorderWidth = 4.0,
+    this.leftBorderWidth = 3.0,
     this.onTap,
     this.backgroundColor = AppColors.cardDark,
+    this.glow,
+    this.borderRadius = 16,
   });
 
   @override
   Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(borderRadius);
+
     Widget content = Container(
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: radius,
         border: Border.all(color: AppColors.borderStroke, width: 1),
+        boxShadow: glow,
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: radius,
         child: IntrinsicHeight(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -36,11 +44,17 @@ class FintechCard extends StatelessWidget {
               if (leftBorderColor != null)
                 Container(
                   width: leftBorderWidth,
-                  color: leftBorderColor,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [leftBorderColor!, leftBorderColor!.withOpacity(0.6)],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                  ),
                 ),
               Expanded(
                 child: Padding(
-                  padding: padding ?? const EdgeInsets.all(14),
+                  padding: padding ?? const EdgeInsets.all(16),
                   child: child,
                 ),
               ),
@@ -53,7 +67,9 @@ class FintechCard extends StatelessWidget {
     if (onTap != null) {
       return InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: radius,
+        splashColor: AppColors.electricYellow.withOpacity(0.05),
+        highlightColor: AppColors.electricYellow.withOpacity(0.03),
         child: content,
       );
     }

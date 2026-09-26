@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../data/models/offline_token.dart';
 
@@ -26,12 +27,12 @@ class TokenStatusBadge extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: AppColors.cardDarker,
-        borderRadius: BorderRadius.circular(6),
+        color: badgeColor.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(9999), // capsule
         border: Border.all(
-          color: token.isUsed ? AppColors.borderStroke : badgeColor.withOpacity(0.5),
+          color: token.isUsed ? AppColors.borderStroke : badgeColor.withOpacity(0.4),
           width: 1,
         ),
       ),
@@ -48,7 +49,7 @@ class TokenStatusBadge extends StatelessWidget {
                 if (!token.isUsed)
                   BoxShadow(
                     color: badgeColor.withOpacity(0.6),
-                    blurRadius: 6,
+                    blurRadius: 8,
                   ),
               ],
             ),
@@ -56,8 +57,7 @@ class TokenStatusBadge extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             '#${index.toString().padLeft(2, '0')} ${token.tokenId.substring(8)}',
-            style: const TextStyle(
-              fontFamily: 'JetBrainsMono',
+            style: GoogleFonts.jetBrainsMono(
               fontSize: 11,
               color: AppColors.white,
               fontWeight: FontWeight.w600,
@@ -66,8 +66,7 @@ class TokenStatusBadge extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             statusText,
-            style: TextStyle(
-              fontFamily: 'JetBrainsMono',
+            style: GoogleFonts.jetBrainsMono(
               fontSize: 10,
               color: badgeColor,
               fontWeight: FontWeight.w700,

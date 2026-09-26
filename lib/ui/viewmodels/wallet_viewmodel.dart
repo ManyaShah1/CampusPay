@@ -34,6 +34,7 @@ class WalletViewModel extends ChangeNotifier {
   bool get isSyncing => _isSyncing;
 
   int get availableTokenCount => _tokens.where((t) => !t.isUsed && !t.isExpired).length;
+  int get unspentTokenCount => availableTokenCount;
 
   WalletViewModel() {
     refresh();
@@ -54,6 +55,29 @@ class WalletViewModel extends ChangeNotifier {
   void topUpWallet(double amount) {
     _walletRepo.topUpWallet(amount);
     refresh();
+  }
+
+  void addFunds(double amount) => topUpWallet(amount);
+
+  void deductOffline(double amount, {String merchant = 'Campus Café'}) {
+    _balance = (_balance - amount).clamp(0.0, double.infinity);
+    awardCoins((amount * 0.1).toInt(), merchant);
+    refresh();
+  }
+
+  void redeemPerk(int coinsCost, String perkName) {
+    if (_coinsState.totalCoins >= coinsCost) {
+      _coinsState = _coinsState.copyWith(
+        totalCoins: _coinsState.totalCoins - coinsCost,
+        history: List<CoinActivity>.from(_coinsState.history)
+          ..insert(0, CoinActivity(
+            title: 'Redeemed: $perkName',
+            coinsDelta: -coinsCost,
+            timestamp: DateTime.now().millisecondsSinceEpoch,
+          )),
+      );
+      notifyListeners();
+    }
   }
 
   void awardCoins(int delta, String reason) {

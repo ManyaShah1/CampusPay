@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../viewmodels/wallet_viewmodel.dart';
@@ -16,7 +17,17 @@ class TokenVaultScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.backgroundBlack,
       appBar: AppBar(
-        title: const Text('ECDSA TOKEN STORE'),
+        title: Text(
+          'ECDSA TOKEN VAULT',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: AppColors.onSurface,
+            letterSpacing: 0.5,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: AppColors.onSurface),
+        backgroundColor: AppColors.surfaceContainerLowest,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: AppColors.electricYellow),
@@ -25,10 +36,9 @@ class TokenVaultScreen extends StatelessWidget {
               walletVM.replenishTokens();
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  backgroundColor: AppColors.cardDark,
                   content: Text(
-                    'Fetched fresh batch of 10 ECDSA secp256k1 tokens with 48hr expiry.',
-                    style: TextStyle(color: AppColors.electricYellow),
+                    'Fetched fresh batch of 10 ECDSA secp256k1 tokens (48hr expiry).',
+                    style: TextStyle(color: AppColors.successGreen),
                   ),
                 ),
               );
@@ -41,20 +51,32 @@ class TokenVaultScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header stats
+            // ── Stats Row ─────────────────────────────────────────────────
             Row(
               children: [
                 Expanded(
                   child: FintechCard(
                     leftBorderColor: AppColors.electricYellow,
+                    glow: AppColors.yellowGlow,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('ACTIVE TOKENS', style: TextStyle(fontFamily: 'JetBrainsMono', fontSize: 10, color: AppColors.mutedText)),
-                        const SizedBox(height: 4),
+                        Text(
+                          'ACTIVE TOKENS',
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 9,
+                            color: AppColors.mutedText,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
                         Text(
                           '${walletVM.availableTokenCount} OF 10',
-                          style: const TextStyle(fontFamily: 'SpaceGrotesk', fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.white),
+                          style: GoogleFonts.bodoniModa(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.onSurface,
+                          ),
                         ),
                       ],
                     ),
@@ -64,14 +86,28 @@ class TokenVaultScreen extends StatelessWidget {
                 Expanded(
                   child: FintechCard(
                     leftBorderColor: AppColors.lightPurple,
+                    glow: AppColors.purpleGlow,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('BATCH EXPIRY', style: TextStyle(fontFamily: 'JetBrainsMono', fontSize: 10, color: AppColors.mutedText)),
-                        const SizedBox(height: 4),
                         Text(
-                          tokens.isNotEmpty ? tokens.first.remainingTimeFormatted : '48h 00m',
-                          style: const TextStyle(fontFamily: 'SpaceGrotesk', fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.lightPurple),
+                          'BATCH EXPIRY',
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 9,
+                            color: AppColors.mutedText,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          tokens.isNotEmpty
+                              ? tokens.first.remainingTimeFormatted
+                              : '48h 00m',
+                          style: GoogleFonts.bodoniModa(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.lightPurple,
+                          ),
                         ),
                       ],
                     ),
@@ -81,12 +117,17 @@ class TokenVaultScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Token Batch Grid
-            const Text(
+            // ── Token Batch ───────────────────────────────────────────────
+            Text(
               'CRYPTOGRAPHIC PRE-AUTH POOL',
-              style: TextStyle(fontFamily: 'SpaceGrotesk', fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.white),
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: AppColors.onSurface,
+                letterSpacing: 0.5,
+              ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
 
             ...tokens.asMap().entries.map((entry) {
               final idx = entry.key + 1;
@@ -95,14 +136,18 @@ class TokenVaultScreen extends StatelessWidget {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: FintechCard(
-                  leftBorderColor: t.isUsed ? AppColors.borderStroke : AppColors.electricYellow,
+                  leftBorderColor:
+                      t.isUsed ? AppColors.borderStroke : AppColors.electricYellow,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       TokenStatusBadge(token: t, index: idx),
                       Text(
                         'Limit: ₹${t.maxAmount.toStringAsFixed(0)}',
-                        style: const TextStyle(fontFamily: 'JetBrainsMono', fontSize: 11, color: AppColors.mutedText),
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 11,
+                          color: AppColors.mutedText,
+                        ),
                       ),
                     ],
                   ),
@@ -111,32 +156,37 @@ class TokenVaultScreen extends StatelessWidget {
             }),
             const SizedBox(height: 24),
 
-            // Security Callout Boxes Section (From Architecture Poster)
-            const Text(
-              'SECURITY INVARIANTS & HARDWARE AUDIT',
-              style: TextStyle(fontFamily: 'SpaceGrotesk', fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.white),
+            // ── Security Invariants ───────────────────────────────────────
+            Text(
+              'SECURITY INVARIANTS',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: AppColors.onSurface,
+                letterSpacing: 0.5,
+              ),
             ),
             const SizedBox(height: 12),
 
             _buildCallout(
               icon: '🔐',
               title: 'AES-256 GCM AT REST',
-              desc: 'Wallet balance is encrypted on-device with keys wrapped by the hardware secure enclave.',
+              desc: 'Wallet balance encrypted on-device with keys wrapped by the hardware secure enclave.',
             ),
             _buildCallout(
               icon: '🔑',
               title: 'ECDSA secp256k1 ASYMMETRIC SIGNING',
-              desc: 'Device private key never leaves the device. Payloads are signed with elliptic curve cryptography.',
+              desc: 'Device private key never leaves the device. Payloads signed with elliptic curve cryptography.',
             ),
             _buildCallout(
               icon: '🎲',
               title: 'UUID NONCE (ANTI-REPLAY)',
-              desc: 'Every payment embeds an ephemeral UUID. SoundBoxes reject any previously seen nonces.',
+              desc: 'Every payment embeds an ephemeral UUID. SoundBoxes reject previously seen nonces.',
             ),
             _buildCallout(
               icon: '1️⃣',
-              title: 'SINGLE USE TOKEN ENFORCEMENT',
-              desc: 'Token is marked USED locally in SQLite prior to audio/BLE burst, preventing double spend.',
+              title: 'SINGLE-USE TOKEN ENFORCEMENT',
+              desc: 'Token marked USED in SQLite prior to audio/BLE burst, preventing double spend.',
             ),
             _buildCallout(
               icon: '⏱',
@@ -154,38 +204,45 @@ class TokenVaultScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCallout({required String icon, required String title, required String desc}) {
+  Widget _buildCallout({
+    required String icon,
+    required String title,
+    required String desc,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.cardDarker,
-          borderRadius: BorderRadius.circular(8),
+          color: AppColors.cardDark,
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.borderStroke),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(icon, style: const TextStyle(fontSize: 18)),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      fontFamily: 'SpaceGrotesk',
-                      fontSize: 11,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: AppColors.electricYellow,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                   Text(
                     desc,
-                    style: const TextStyle(fontSize: 11, color: AppColors.lightMutedText, height: 1.35),
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      color: AppColors.onSurfaceVariant,
+                      height: 1.5,
+                    ),
                   ),
                 ],
               ),

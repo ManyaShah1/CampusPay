@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../core/constants/app_colors.dart';
@@ -23,63 +24,84 @@ class ReceiptScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('PAYMENT RECEIPT'),
         automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.close_rounded, color: AppColors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // Success Icon Banner
+            // ── Success State ─────────────────────────────────────────────
             Container(
-              width: 72,
-              height: 72,
+              width: 88,
+              height: 88,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.successGreen.withOpacity(0.15),
+                color: AppColors.successGreen.withOpacity(0.12),
                 border: Border.all(color: AppColors.successGreen, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.successGreen.withOpacity(0.3),
+                    blurRadius: 28,
+                    spreadRadius: 0,
+                  ),
+                ],
               ),
               child: const Icon(
                 Icons.check_rounded,
                 color: AppColors.successGreen,
-                size: 40,
+                size: 44,
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
+
+            Text(
               'PAYMENT VERIFIED & COMMITTED',
-              style: TextStyle(
-                fontFamily: 'SpaceGrotesk',
-                fontSize: 14,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
                 fontWeight: FontWeight.w800,
                 color: AppColors.successGreen,
-                letterSpacing: 0.5,
+                letterSpacing: 0.8,
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
+
+            // Amount — Bodoni Moda editorial
             Text(
               '₹${record.amount.toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontFamily: 'SpaceGrotesk',
-                fontSize: 40,
+              style: GoogleFonts.bodoniModa(
+                fontSize: 48,
                 fontWeight: FontWeight.w800,
                 color: AppColors.white,
+                letterSpacing: -1.5,
               ),
             ),
             Text(
               'Paid to ${record.merchantName}',
-              style: const TextStyle(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 14,
-                color: AppColors.lightMutedText,
+                color: AppColors.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
 
-            // Scannable Receipt QR
+            // ── QR Code Card ──────────────────────────────────────────────
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.borderStroke),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
               child: Column(
                 children: [
@@ -89,14 +111,14 @@ class ReceiptScreen extends StatelessWidget {
                     size: 180.0,
                     backgroundColor: Colors.white,
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
+                  const SizedBox(height: 10),
+                  Text(
                     'SCANNABLE OPTICAL PROOF',
-                    style: TextStyle(
-                      fontFamily: 'JetBrainsMono',
+                    style: GoogleFonts.jetBrainsMono(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
-                      color: Colors.black,
+                      color: Colors.black54,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ],
@@ -104,39 +126,67 @@ class ReceiptScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Cryptographic Details
+            // ── Cryptographic Details ─────────────────────────────────────
             FintechCard(
               leftBorderColor: AppColors.deepPurple,
+              glow: AppColors.purpleGlow,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildDetailRow('TRANSACTION ID:', record.txnId),
-                  const SizedBox(height: 8),
-                  _buildDetailRow('TOKEN USED:', record.tokenId),
-                  const SizedBox(height: 8),
-                  _buildDetailRow('NONCE (ANTI-REPLAY):', record.nonce.substring(0, 16)),
-                  const SizedBox(height: 8),
-                  _buildDetailRow('CARRIER:', record.channelDisplayName),
-                  const SizedBox(height: 8),
-                  _buildDetailRow('TIMESTAMP:', timeStr),
-                  const SizedBox(height: 8),
-                  _buildDetailRow('PAYER SIG (ECDSA):', '${payload.payerSignature.substring(0, 18)}...'),
+                  Row(
+                    children: [
+                      const Icon(Icons.verified_user_rounded,
+                          size: 14, color: AppColors.lightPurple),
+                      const SizedBox(width: 8),
+                      Text(
+                        'CRYPTOGRAPHIC PROOF',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.lightPurple,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Divider(color: AppColors.borderStroke, height: 1),
+                  const SizedBox(height: 14),
+                  _buildDetailRow('TRANSACTION ID', record.txnId),
+                  const SizedBox(height: 10),
+                  _buildDetailRow('TOKEN USED', record.tokenId),
+                  const SizedBox(height: 10),
+                  _buildDetailRow(
+                      'NONCE (ANTI-REPLAY)', record.nonce.substring(0, 16)),
+                  const SizedBox(height: 10),
+                  _buildDetailRow('CARRIER', record.channelDisplayName),
+                  const SizedBox(height: 10),
+                  _buildDetailRow('TIMESTAMP', timeStr),
+                  const SizedBox(height: 10),
+                  _buildDetailRow('PAYER SIG (ECDSA)',
+                      '${payload.payerSignature.substring(0, 18)}...'),
                 ],
               ),
             ),
             const SizedBox(height: 24),
 
-            // Back button
+            // ── CTA ───────────────────────────────────────────────────────
             SizedBox(
               width: double.infinity,
-              height: 48,
+              height: 56,
               child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: const Text('BACK TO WALLET'),
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  'BACK TO WALLET',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                  ),
+                ),
               ),
             ),
+            const SizedBox(height: 8),
           ],
         ),
       ),
@@ -145,23 +195,26 @@ class ReceiptScreen extends StatelessWidget {
 
   Widget _buildDetailRow(String label, String value) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontFamily: 'JetBrainsMono',
+          style: GoogleFonts.jetBrainsMono(
             fontSize: 10,
             color: AppColors.mutedText,
           ),
         ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontFamily: 'JetBrainsMono',
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            color: AppColors.white,
+        const SizedBox(width: 16),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: GoogleFonts.jetBrainsMono(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: AppColors.white,
+            ),
           ),
         ),
       ],

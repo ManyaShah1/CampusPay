@@ -29,7 +29,7 @@ class CampusPayApp extends StatelessWidget {
       child: MaterialApp(
         title: 'CampusPay DBIT',
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.darkTheme,
+        theme: AppTheme.lightTheme,
         home: const MainNavigationScreen(),
       ),
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../viewmodels/p2p_viewmodel.dart';
@@ -14,7 +15,8 @@ class P2pTransferScreen extends StatefulWidget {
 }
 
 class _P2pTransferScreenState extends State<P2pTransferScreen> {
-  final TextEditingController _amountController = TextEditingController(text: '150');
+  final TextEditingController _amountController =
+      TextEditingController(text: '150');
 
   final List<String> _peers = [
     'Rohan Verma (SE-COMPS)',
@@ -69,110 +71,154 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Protocol Banner
+        // Protocol info banner
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: const Color(0xFF1E0A2D),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppColors.lightPurple.withOpacity(0.5)),
+            color: AppColors.deepPurple.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.lightPurple.withOpacity(0.3),
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
-                'TWO-PHASE AIRGAP COMMIT',
-                style: TextStyle(
-                  fontFamily: 'SpaceGrotesk',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.lightPurple,
-                ),
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.security_rounded,
+                      size: 14, color: AppColors.lightPurple),
+                  const SizedBox(width: 8),
+                  Text(
+                    'TWO-PHASE AIRGAP COMMIT',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.lightPurple,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 6),
               Text(
-                'Funds are ONLY deducted from your wallet after peer receives the ultrasonic payload and responds with a verified Acoustic ACK.',
-                style: TextStyle(fontSize: 11, color: AppColors.lightMutedText, height: 1.4),
+                'Funds deducted ONLY after peer receives the ultrasonic payload and responds with a verified Acoustic ACK.',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  color: AppColors.lightMutedText,
+                  height: 1.5,
+                ),
               ),
             ],
           ),
         ),
         const SizedBox(height: 24),
 
-        // Peer Selection
-        const Text(
-          'SELECT NEARBY PEER',
-          style: TextStyle(
-            fontFamily: 'SpaceGrotesk',
-            fontSize: 12,
+        Text(
+          'NEARBY PEERS',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 11,
             fontWeight: FontWeight.w800,
             color: AppColors.mutedText,
+            letterSpacing: 0.8,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
 
+        // Peer list
         ..._peers.map((peer) {
           final isSelected = peer == _selectedPeer;
+          final initials = peer.split(' ').take(2).map((w) => w[0]).join();
+
           return Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: FintechCard(
               leftBorderColor: isSelected ? AppColors.lightPurple : AppColors.borderStroke,
-              backgroundColor: isSelected ? const Color(0xFF1B1425) : AppColors.cardDark,
-              onTap: () {
-                setState(() => _selectedPeer = peer);
-              },
+              backgroundColor: isSelected
+                  ? AppColors.deepPurple.withOpacity(0.08)
+                  : AppColors.cardDark,
+              glow: isSelected ? AppColors.purpleGlow : null,
+              onTap: () => setState(() => _selectedPeer = peer),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      const CircleAvatar(
-                        radius: 16,
-                        backgroundColor: Color(0xFF2A153A),
-                        child: Icon(Icons.person_rounded, size: 18, color: AppColors.lightPurple),
+                  // Avatar with initials
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppColors.deepPurple.withOpacity(0.4)
+                          : AppColors.surfaceContainerHigh,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isSelected
+                            ? AppColors.lightPurple.withOpacity(0.5)
+                            : AppColors.borderStroke,
                       ),
-                      const SizedBox(width: 12),
-                      Text(
-                        peer,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.white),
+                    ),
+                    child: Center(
+                      child: Text(
+                        initials,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          color: isSelected
+                              ? AppColors.lightPurple
+                              : AppColors.mutedText,
+                        ),
                       ),
-                    ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      peer,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: AppColors.white,
+                      ),
+                    ),
                   ),
                   if (isSelected)
-                    const Icon(Icons.check_circle_rounded, color: AppColors.lightPurple, size: 18),
+                    const Icon(
+                      Icons.check_circle_rounded,
+                      color: AppColors.lightPurple,
+                      size: 20,
+                    ),
                 ],
               ),
             ),
           );
         }),
+
         const SizedBox(height: 20),
 
-        // Amount Input
-        const Text(
-          'TRANSFER AMOUNT (₹)',
-          style: TextStyle(
-            fontFamily: 'SpaceGrotesk',
-            fontSize: 12,
+        Text(
+          'TRANSFER AMOUNT',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 11,
             fontWeight: FontWeight.w800,
             color: AppColors.mutedText,
+            letterSpacing: 0.8,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
 
+        // Amount input — Bodoni Moda editorial
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           decoration: BoxDecoration(
             color: AppColors.cardDark,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.borderStroke),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.borderStroke, width: 1.5),
           ),
           child: Row(
             children: [
-              const Text(
+              Text(
                 '₹',
-                style: TextStyle(
-                  fontFamily: 'SpaceGrotesk',
-                  fontSize: 32,
+                style: GoogleFonts.bodoniModa(
+                  fontSize: 36,
                   fontWeight: FontWeight.w800,
                   color: AppColors.lightPurple,
                 ),
@@ -182,9 +228,8 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
                 child: TextField(
                   controller: _amountController,
                   keyboardType: TextInputType.number,
-                  style: const TextStyle(
-                    fontFamily: 'SpaceGrotesk',
-                    fontSize: 32,
+                  style: GoogleFonts.bodoniModa(
+                    fontSize: 36,
                     fontWeight: FontWeight.w800,
                     color: AppColors.white,
                   ),
@@ -192,6 +237,8 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
                     border: InputBorder.none,
                     hintText: '0',
                     hintStyle: TextStyle(color: AppColors.borderStroke),
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
                   ),
                 ),
               ),
@@ -200,38 +247,59 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
         ),
         const SizedBox(height: 24),
 
+        // Error state
         if (p2pVM.statusMessage != null && p2pVM.state == P2pState.failed)
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             margin: const EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(
-              color: AppColors.redAccent.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: AppColors.redAccent),
+              color: AppColors.redAccent.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.redAccent.withOpacity(0.5)),
             ),
             child: Text(
               p2pVM.statusMessage!,
-              style: const TextStyle(fontSize: 12, color: AppColors.redAccent),
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                color: AppColors.redAccent,
+              ),
             ),
           ),
 
+        // Send button — purple secondary CTA style
         SizedBox(
           width: double.infinity,
-          height: 52,
+          height: 56,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.lightPurple,
-              foregroundColor: Colors.black,
+              backgroundColor: AppColors.deepPurple,
+              foregroundColor: AppColors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             onPressed: () {
               final amt = double.tryParse(_amountController.text) ?? 0.0;
               if (amt <= 0) return;
-
               p2pVM.setPeerName(_selectedPeer);
               p2pVM.setAmount(amt);
               p2pVM.sendP2pTransfer();
             },
-            child: const Text('EMIT P2P BURST TO PEER'),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.wifi_tethering_rounded, size: 20),
+                const SizedBox(width: 10),
+                Text(
+                  'EMIT P2P BURST TO PEER',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -249,8 +317,7 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
               ? 'TRANSMITTING TO ${_selectedPeer.split(' ')[0].toUpperCase()}...'
               : 'WAITING FOR ACOUSTIC ACK...',
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontFamily: 'SpaceGrotesk',
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 16,
             fontWeight: FontWeight.w800,
             color: AppColors.lightPurple,
@@ -260,7 +327,10 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
         Text(
           p2pVM.statusMessage ?? '',
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 12, color: AppColors.lightMutedText),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 12,
+            color: AppColors.lightMutedText,
+          ),
         ),
       ],
     );
@@ -275,30 +345,51 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
     return Column(
       children: [
         const SizedBox(height: 30),
-        const Icon(Icons.check_circle_rounded, color: AppColors.successGreen, size: 64),
-        const SizedBox(height: 16),
-        const Text(
-          'P2P AIRGAP COMMIT COMPLETE',
-          style: TextStyle(
-            fontFamily: 'SpaceGrotesk',
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
+        Container(
+          width: 88,
+          height: 88,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.successGreen.withOpacity(0.12),
+            border: Border.all(color: AppColors.successGreen, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.successGreen.withOpacity(0.3),
+                blurRadius: 24,
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.check_rounded,
             color: AppColors.successGreen,
+            size: 44,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 16),
+        Text(
+          'P2P AIRGAP COMMIT COMPLETE',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            color: AppColors.successGreen,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 8),
         Text(
           '₹${txn.amount.toStringAsFixed(2)}',
-          style: const TextStyle(
-            fontFamily: 'SpaceGrotesk',
-            fontSize: 36,
+          style: GoogleFonts.bodoniModa(
+            fontSize: 44,
             fontWeight: FontWeight.w800,
             color: AppColors.white,
           ),
         ),
         Text(
           'Transferred to ${txn.merchantName}',
-          style: const TextStyle(fontSize: 13, color: AppColors.lightMutedText),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 13,
+            color: AppColors.lightMutedText,
+          ),
         ),
         const SizedBox(height: 24),
         FintechCard(
@@ -306,9 +397,9 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
           child: Column(
             children: [
               _row('TRANSACTION ID', txn.txnId),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               _row('NONCE PAIR', txn.nonce.substring(0, 16)),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               _row('STATUS', 'COMMITTED VIA ACOUSTIC ACK'),
             ],
           ),
@@ -316,7 +407,7 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
         const SizedBox(height: 30),
         SizedBox(
           width: double.infinity,
-          height: 48,
+          height: 52,
           child: ElevatedButton(
             onPressed: () {
               walletVM.refresh();
@@ -334,8 +425,21 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontFamily: 'JetBrainsMono', fontSize: 10, color: AppColors.mutedText)),
-        Text(value, style: const TextStyle(fontFamily: 'JetBrainsMono', fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.white)),
+        Text(
+          label,
+          style: GoogleFonts.jetBrainsMono(
+            fontSize: 10,
+            color: AppColors.mutedText,
+          ),
+        ),
+        Text(
+          value,
+          style: GoogleFonts.jetBrainsMono(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: AppColors.white,
+          ),
+        ),
       ],
     );
   }
