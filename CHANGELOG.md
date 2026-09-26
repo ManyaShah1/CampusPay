@@ -51,6 +51,47 @@ Always categorize your entries using these standard tags:
 
 ---
 
+## [v2.4.1] — 2026-09-26 (History Page Contrast & Universal Overflow Hardening)
+
+### Summary
+Resolved unreadable white-on-white typography on the History screen (`TransactionsLedgerScreen`) following the Stitch Neon White theme transition. Eliminated all `RenderFlex` horizontal and vertical overflow warnings across all core screens (`StudentHomeScreen`, `TransactionsLedgerScreen`, `CampusCoinsScreen`, `ScanAndPayScreen`, `EnterAmountScreen`, `ProfileSettingsScreen`, and `PaymentSuccessScreen`) on both compact mobile viewports (320px–375px) and desktop web windows.
+
+---
+
+### 🎨 1. History Page White Text Contrast Fixes ([`transactions_ledger_screen.dart`](file:///Users/manyashah/StudioProjects/CampusPay/lib/ui/screens/transactions_ledger_screen.dart))
+- **Transactions Header**: Updated main headline `Transactions` from `AppColors.white` to `AppColors.onSurface` (`#1C1B1B`).
+- **Search Bar**: Fixed input text color from `AppColors.white` to `AppColors.onSurface` and tune filter icon to `AppColors.onSurface`.
+- **Filter Chips**: Changed unselected filter pill text from `AppColors.white` to `AppColors.onSurface` (`#1C1B1B`) on `#F6F3F2` background.
+- **Section Headers**: Changed `Today` and `Yesterday` group title labels to `AppColors.onSurface`.
+- **Ledger Tiles**:
+  - Replaced `amountColor: AppColors.white` with `AppColors.onSurface` for all debit transactions (`-₹120.00`, `-₹80.00`, `-₹240.00`, `-₹50.00`).
+  - Updated tile title text to `AppColors.onSurface`.
+  - Upgraded screen `AppBar` to standard Stitch brand header using `assets/images/brand_logo.png`, `CampusPay` title in `#1C1B1B`, and `assets/images/profile_avatar.png`.
+
+---
+
+### 📐 2. Universal RenderFlex Overflow Resolutions
+- **[`student_home_screen.dart`](file:///Users/manyashah/StudioProjects/CampusPay/lib/ui/screens/student_home_screen.dart)**:
+  - **Greeting Header**: Wrapped greeting text `Column` in `Expanded` and title text in `Flexible(child: Text(..., overflow: TextOverflow.ellipsis, maxLines: 1))`, preventing right-side overflow on narrow viewports.
+  - **Hero Card Footer**: Wrapped token badge in `Flexible` and added `maxLines: 1, overflow: TextOverflow.ellipsis` to prevent collision with `Add Money` button.
+  - **CampusCoins Banner**: Wrapped left content in `Expanded(child: Row(..., Expanded(child: Column(...))))` with `overflow: TextOverflow.ellipsis` on streak badge and redemption subtitle.
+  - **Activity Tiles**: Added `maxLines: 1` and `overflow: TextOverflow.ellipsis` to titles and time strings, plus explicit spacing before the amount column.
+- **[`campus_coins_screen.dart`](file:///Users/manyashah/StudioProjects/CampusPay/lib/ui/screens/campus_coins_screen.dart)**:
+  - **Grid Aspect Ratio**: Adjusted `childAspectRatio` from `0.68` to `0.62` to guarantee sufficient vertical height for product cards across all screen scales.
+  - **Card Footer**: Wrapped coins indicator in `Flexible(child: Row(..., Flexible(child: Text(..., overflow: TextOverflow.ellipsis))))` to prevent overflow when redeeming high coin counts.
+- **[`scan_and_pay_screen.dart`](file:///Users/manyashah/StudioProjects/CampusPay/lib/ui/screens/scan_and_pay_screen.dart)**:
+  - **Offline Ready Banner**: Wrapped `OFFLINE READY` row in `Expanded` with `Flexible` ellipsis on text.
+  - **Camera Viewfinder**: Added `left: 16, right: 16` horizontal constraints to `Positioned` alignment instruction column and wrapped ultrasound sync message in `Flexible` with ellipsis.
+  - **Recent Campus Spots**: Wrapped title row in `Flexible` with ellipsis.
+- **[`enter_amount_screen.dart`](file:///Users/manyashah/StudioProjects/CampusPay/lib/ui/screens/enter_amount_screen.dart)**:
+  - Wrapped merchant name and payment method title in `Flexible` with ellipsis.
+- **[`profile_settings_screen.dart`](file:///Users/manyashah/StudioProjects/CampusPay/lib/ui/screens/profile_settings_screen.dart)**:
+  - Wrapped 3-column metric card sublabels in `Expanded` with `maxLines: 1, overflow: TextOverflow.ellipsis`.
+- **[`payment_success_screen.dart`](file:///Users/manyashah/StudioProjects/CampusPay/lib/ui/screens/payment_success_screen.dart)**:
+  - Made receipt row values `Flexible` with `TextOverflow.ellipsis`.
+
+---
+
 ## [v2.4.0] — 2026-09-26 (Stitch "Neon White" & Asset Ingestion)
 
 ### Summary

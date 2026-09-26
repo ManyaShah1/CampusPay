@@ -706,21 +706,28 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen> {
             color: AppColors.onSurfaceVariant,
           ),
         ),
-        Row(
-          children: [
-            if (icon != null) ...[
-              Icon(icon, size: 14, color: AppColors.lightPurple),
-              const SizedBox(width: 4),
-            ],
-            Text(
-              value,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.onSurface,
+        const SizedBox(width: 8),
+        Flexible(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 14, color: AppColors.lightPurple),
+                const SizedBox(width: 4),
+              ],
+              Flexible(
+                child: Text(
+                  value,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.onSurface,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );

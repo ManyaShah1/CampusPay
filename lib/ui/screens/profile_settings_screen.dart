@@ -505,11 +505,15 @@ class ProfileSettingsScreen extends StatelessWidget {
                 ),
                 const SizedBox(width: 4),
               ],
-              Text(
-                sublabel,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 10,
-                  color: AppColors.onSurfaceVariant,
+              Expanded(
+                child: Text(
+                  sublabel,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 10,
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

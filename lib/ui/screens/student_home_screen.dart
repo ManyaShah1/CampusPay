@@ -193,55 +193,66 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              'Good morning, Manya',
-                              style: GoogleFonts.bodoniModa(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.onSurface,
-                                letterSpacing: -0.5,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  'Good morning, Manya',
+                                  style: GoogleFonts.bodoniModa(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.onSurface,
+                                    letterSpacing: -0.5,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 6),
-                            const Text('👋', style: TextStyle(fontSize: 20)),
-                          ],
-                        ),
-                        const SizedBox(height: 3),
-                        Row(
-                          children: [
-                            Container(
-                              width: 7,
-                              height: 7,
-                              decoration: const BoxDecoration(
-                                color: AppColors.successGreen,
-                                shape: BoxShape.circle,
+                              const SizedBox(width: 6),
+                              const Text('👋', style: TextStyle(fontSize: 20)),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Row(
+                            children: [
+                              Container(
+                                width: 7,
+                                height: 7,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.successGreen,
+                                  shape: BoxShape.circle,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'DBIT Mumbai • Campus mode: ',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11,
-                                color: AppColors.onSurfaceVariant,
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  'DBIT Mumbai • Campus mode: ',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 11,
+                                    color: AppColors.onSurfaceVariant,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                            ),
-                            Text(
-                              'ON',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.onSurface,
+                              Text(
+                                'ON',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.onSurface,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Row(
                       children: [
                         GestureDetector(
@@ -491,32 +502,40 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                GestureDetector(
-                                  onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const TokenVaultScreen(),
+                                Flexible(
+                                  child: GestureDetector(
+                                    onTap: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const TokenVaultScreen(),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.token_rounded,
+                                          size: 16,
+                                          color: AppColors.lightPurpleDim,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Flexible(
+                                          child: Text(
+                                            '${walletVM.unspentTokenCount} Offline Tokens',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.white,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.token_rounded,
-                                        size: 16,
-                                        color: AppColors.lightPurpleDim,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        '${walletVM.unspentTokenCount} Offline Tokens',
-                                        style: GoogleFonts.plusJakartaSans(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.white,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
                                 ),
+                                const SizedBox(width: 8),
                                 ElevatedButton.icon(
                                   onPressed: _showAddMoneyModal,
                                   icon: const Icon(Icons.add_rounded, size: 16),
@@ -790,79 +809,90 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFE5BFFF),
-                                shape: BoxShape.circle,
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFE5BFFF),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.stars_rounded,
+                                  color: AppColors.deepPurple,
+                                  size: 24,
+                                ),
                               ),
-                              child: const Icon(
-                                Icons.stars_rounded,
-                                color: AppColors.deepPurple,
-                                size: 24,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      '${walletVM.coinsState.totalCoins}',
-                                      style: GoogleFonts.bodoniModa(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w900,
-                                        color: AppColors.onSurface,
-                                      ),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          '${walletVM.coinsState.totalCoins}',
+                                          style: GoogleFonts.bodoniModa(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.w900,
+                                            color: AppColors.onSurface,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'Coins',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.onSurfaceVariant,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Flexible(
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.surfaceContainerLowest,
+                                              borderRadius: BorderRadius.circular(
+                                                9999,
+                                              ),
+                                            ),
+                                            child: Text(
+                                              '🔥 5-day streak',
+                                              style: GoogleFonts.plusJakartaSans(
+                                                fontSize: 9,
+                                                fontWeight: FontWeight.w700,
+                                                color: AppColors.onSurface,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(width: 6),
+                                    const SizedBox(height: 2),
                                     Text(
-                                      'Coins',
+                                      '₹${walletVM.coinsState.rupeeEquivalent.toStringAsFixed(0)} redemption value at campus stores',
                                       style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
+                                        fontSize: 11,
                                         color: AppColors.onSurfaceVariant,
                                       ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.surfaceContainerLowest,
-                                        borderRadius: BorderRadius.circular(
-                                          9999,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        '🔥 5-day streak',
-                                        style: GoogleFonts.plusJakartaSans(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.onSurface,
-                                        ),
-                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '₹${walletVM.coinsState.rupeeEquivalent.toStringAsFixed(0)} redemption value at campus stores',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11,
-                                    color: AppColors.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                              ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
@@ -1298,6 +1328,8 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                     fontWeight: FontWeight.w700,
                     color: AppColors.onSurface,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 3),
                 Row(
@@ -1321,11 +1353,15 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                       ),
                     ),
                     const SizedBox(width: 6),
-                    Text(
-                      time,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        color: AppColors.onSurfaceVariant,
+                    Flexible(
+                      child: Text(
+                        time,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -1333,6 +1369,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
               ],
             ),
           ),
+          const SizedBox(width: 8),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [

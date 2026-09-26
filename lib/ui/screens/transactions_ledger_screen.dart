@@ -111,7 +111,7 @@ class _TransactionsLedgerScreenState extends State<TransactionsLedgerScreen> {
                     style: GoogleFonts.bodoniModa(
                       fontSize: 32,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.white,
+                      color: AppColors.onSurface,
                       letterSpacing: -0.5,
                     ),
                   ),
@@ -149,7 +149,7 @@ class _TransactionsLedgerScreenState extends State<TransactionsLedgerScreen> {
                         controller: _searchController,
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 13,
-                          color: AppColors.white,
+                          color: AppColors.onSurface,
                         ),
                         decoration: InputDecoration(
                           hintText: 'Search student, vendor or Tx ID...',
@@ -185,7 +185,7 @@ class _TransactionsLedgerScreenState extends State<TransactionsLedgerScreen> {
                       ),
                       child: const Icon(
                         Icons.tune_rounded,
-                        color: AppColors.white,
+                        color: AppColors.onSurface,
                         size: 16,
                       ),
                     ),
@@ -232,7 +232,7 @@ class _TransactionsLedgerScreenState extends State<TransactionsLedgerScreen> {
                                   : FontWeight.w600,
                               color: isSelected
                                   ? AppColors.onElectricYellow
-                                  : AppColors.white,
+                                  : AppColors.onSurface,
                             ),
                           ),
                         ),
@@ -376,6 +376,8 @@ class _TransactionsLedgerScreenState extends State<TransactionsLedgerScreen> {
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.white.withValues(
@@ -421,7 +423,7 @@ class _TransactionsLedgerScreenState extends State<TransactionsLedgerScreen> {
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.white,
+                      color: AppColors.onSurface,
                     ),
                   ),
                   Text(
@@ -445,7 +447,7 @@ class _TransactionsLedgerScreenState extends State<TransactionsLedgerScreen> {
                 badgeText: 'Offline SoundBox',
                 badgeIcon: Icons.graphic_eq_rounded,
                 amount: '-₹120.00',
-                amountColor: AppColors.white,
+                amountColor: AppColors.onSurface,
                 statusText: 'Settled ✓',
                 statusColor: AppColors.electricYellow,
               ),
@@ -476,7 +478,7 @@ class _TransactionsLedgerScreenState extends State<TransactionsLedgerScreen> {
                 time: '08:30 AM',
                 badgeText: 'Offline Token #08',
                 amount: '-₹80.00',
-                amountColor: AppColors.white,
+                amountColor: AppColors.onSurface,
                 statusText: 'Settled ✓',
                 statusColor: AppColors.electricYellow,
               ),
@@ -492,7 +494,7 @@ class _TransactionsLedgerScreenState extends State<TransactionsLedgerScreen> {
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.white,
+                      color: AppColors.onSurface,
                     ),
                   ),
                   Text(
@@ -516,7 +518,7 @@ class _TransactionsLedgerScreenState extends State<TransactionsLedgerScreen> {
                 badgeText: 'BLE Offline',
                 badgeIcon: Icons.bluetooth_rounded,
                 amount: '-₹240.00',
-                amountColor: AppColors.white,
+                amountColor: AppColors.onSurface,
                 statusText: 'Synced offline',
                 statusColor: AppColors.successGreen,
               ),
@@ -531,7 +533,7 @@ class _TransactionsLedgerScreenState extends State<TransactionsLedgerScreen> {
                 time: '04:15 PM',
                 badgeText: 'UPI Online',
                 amount: '-₹50.00',
-                amountColor: AppColors.white,
+                amountColor: AppColors.onSurface,
                 statusText: 'Settled ✓',
                 statusColor: AppColors.electricYellow,
               ),
@@ -551,32 +553,56 @@ class _TransactionsLedgerScreenState extends State<TransactionsLedgerScreen> {
       titleSpacing: 16,
       title: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-            decoration: BoxDecoration(
-              color: AppColors.electricYellow,
-              borderRadius: BorderRadius.circular(5),
-            ),
-            child: Text(
-              'DBIT',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 10,
-                fontWeight: FontWeight.w800,
-                color: AppColors.onElectricYellow,
+          Image.asset(
+            'assets/images/brand_logo.png',
+            height: 32,
+            errorBuilder: (_, _, _) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+              decoration: BoxDecoration(
+                color: AppColors.electricYellow,
+                borderRadius: BorderRadius.circular(5),
+              ),
+              child: Text(
+                'DBIT',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.onElectricYellow,
+                ),
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'CampusPay',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.white,
-                ),
+              Row(
+                children: [
+                  Text(
+                    'CampusPay',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.onSurface,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                    decoration: BoxDecoration(
+                      color: AppColors.secondaryFixed,
+                      borderRadius: BorderRadius.circular(9999),
+                    ),
+                    child: Text(
+                      'DBIT',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.onSecondaryFixed,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               Text(
                 'DBIT Mumbai Campus',
@@ -591,21 +617,26 @@ class _TransactionsLedgerScreenState extends State<TransactionsLedgerScreen> {
       ),
       actions: [
         Container(
-          width: 32,
-          height: 32,
+          width: 36,
+          height: 36,
           margin: const EdgeInsets.only(right: 16),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: AppColors.deepPurple,
             border: Border.all(color: AppColors.borderStroke),
           ),
-          child: Center(
-            child: Text(
-              'M',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                color: AppColors.white,
+          child: ClipOval(
+            child: Image.asset(
+              'assets/images/profile_avatar.png',
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Center(
+                child: Text(
+                  'MS',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.onSurface,
+                  ),
+                ),
               ),
             ),
           ),
@@ -652,7 +683,7 @@ class _TransactionsLedgerScreenState extends State<TransactionsLedgerScreen> {
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.white,
+                    color: AppColors.onSurface,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -675,35 +706,40 @@ class _TransactionsLedgerScreenState extends State<TransactionsLedgerScreen> {
                       ),
                     ),
                     const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceContainerHigh,
-                        borderRadius: BorderRadius.circular(9999),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (badgeIcon != null) ...[
-                            Icon(
-                              badgeIcon,
-                              size: 10,
-                              color: AppColors.lightPurple,
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceContainerHigh,
+                          borderRadius: BorderRadius.circular(9999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (badgeIcon != null) ...[
+                              Icon(
+                                badgeIcon,
+                                size: 10,
+                                color: AppColors.lightPurple,
+                              ),
+                              const SizedBox(width: 3),
+                            ],
+                            Flexible(
+                              child: Text(
+                                badgeText,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.lightPurple,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                            const SizedBox(width: 3),
                           ],
-                          Text(
-                            badgeText,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.lightPurple,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ],

@@ -755,7 +755,7 @@ class _CampusCoinsScreenState extends State<CampusCoinsScreen> {
                 crossAxisCount: 2,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
-                childAspectRatio: 0.68,
+                childAspectRatio: 0.62,
                 children: [
                   _buildMarketplaceCard(
                     categoryBadge: 'Beverage',
@@ -1047,24 +1047,31 @@ class _CampusCoinsScreenState extends State<CampusCoinsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.stars_rounded,
-                    size: 14,
-                    color: AppColors.deepPurpleAlt,
-                  ),
-                  const SizedBox(width: 3),
-                  Text(
-                    '$coins',
-                    style: GoogleFonts.bodoniModa(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.onSurface,
+              Flexible(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.stars_rounded,
+                      size: 14,
+                      color: AppColors.deepPurpleAlt,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 3),
+                    Flexible(
+                      child: Text(
+                        '$coins',
+                        style: GoogleFonts.bodoniModa(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.onSurface,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 4),
               ElevatedButton(
                 onPressed: onRedeem,
                 style: ElevatedButton.styleFrom(

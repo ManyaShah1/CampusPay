@@ -159,14 +159,18 @@ class _EnterAmountScreenState extends State<EnterAmountScreen>
                         children: [
                           Row(
                             children: [
-                              Text(
-                                widget.merchantName,
-                                style: GoogleFonts.plusJakartaSans(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.onSurface,
+                              Flexible(
+                                child: Text(
+                                  widget.merchantName,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.onSurface,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                            ),
                               const SizedBox(width: 6),
                               const Icon(
                                 Icons.verified_rounded,
@@ -634,12 +638,16 @@ class _EnterAmountScreenState extends State<EnterAmountScreen>
                 children: [
                   Row(
                     children: [
-                      Text(
-                        title,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.onSurface,
+                      Flexible(
+                        child: Text(
+                          title,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.onSurface,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       const SizedBox(width: 6),

@@ -128,28 +128,35 @@ class _ScanAndPayScreenState extends State<ScanAndPayScreen>
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                color: AppColors.successGreen,
-                                shape: BoxShape.circle,
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.successGreen,
+                                  shape: BoxShape.circle,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'OFFLINE READY • 10 TOKENS ACTIVE',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.onSurface,
-                                letterSpacing: 0.8,
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  'OFFLINE READY • 10 TOKENS ACTIVE',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.onSurface,
+                                    letterSpacing: 0.8,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
@@ -351,7 +358,10 @@ class _ScanAndPayScreenState extends State<ScanAndPayScreen>
                         // Bottom alignment instructions
                         Positioned(
                           bottom: 16,
+                          left: 16,
+                          right: 16,
                           child: Column(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
                                 'ALIGN QR INSIDE FRAME',
@@ -361,9 +371,12 @@ class _ScanAndPayScreenState extends State<ScanAndPayScreen>
                                   color: AppColors.white,
                                   letterSpacing: 1.2,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 4),
                               Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   const Icon(
                                     Icons.graphic_eq_rounded,
@@ -371,12 +384,16 @@ class _ScanAndPayScreenState extends State<ScanAndPayScreen>
                                     color: AppColors.electricYellow,
                                   ),
                                   const SizedBox(width: 4),
-                                  Text(
-                                    '((•)) Acoustic Ultrasound sync listening (18.4 kHz)...',
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 10,
-                                      color: AppColors.electricYellow,
-                                      fontWeight: FontWeight.w600,
+                                  Flexible(
+                                    child: Text(
+                                      '((•)) Acoustic Ultrasound sync listening (18.4 kHz)...',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 10,
+                                        color: AppColors.electricYellow,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
@@ -460,24 +477,31 @@ class _ScanAndPayScreenState extends State<ScanAndPayScreen>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.hub_rounded,
-                            size: 18,
-                            color: AppColors.electricYellow,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Recent Campus Spots',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.onSurface,
+                      Flexible(
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.hub_rounded,
+                              size: 18,
+                              color: AppColors.electricYellow,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                'Recent Campus Spots',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.onSurface,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
