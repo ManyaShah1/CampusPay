@@ -219,7 +219,7 @@ class ProfileSettingsScreen extends StatelessWidget {
                     child: _buildMetricCard(
                       icon: Icons.account_balance_wallet_rounded,
                       label: 'WALLET',
-                      value: '₹2,450.00',
+                      value: '₹${walletVM.balance.toStringAsFixed(2)}',
                       sublabel: 'DBIT Vault',
                     ),
                   ),

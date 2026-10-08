@@ -220,25 +220,31 @@ class _CampusCoinsScreenState extends State<CampusCoinsScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.stars_rounded,
-                              size: 18,
-                              color: AppColors.electricYellow,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'CAMPUS REWARDS VAULT',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.onSurfaceVariant,
-                                letterSpacing: 0.6,
+                        Expanded(
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.stars_rounded,
+                                size: 18,
+                                color: AppColors.electricYellow,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  'CAMPUS REWARDS VAULT',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.onSurfaceVariant,
+                                    letterSpacing: 0.6,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
@@ -295,45 +301,49 @@ class _CampusCoinsScreenState extends State<CampusCoinsScreen> {
 
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.baseline,
-                              textBaseline: TextBaseline.alphabetic,
-                              children: [
-                                Text(
-                                  '${coins.totalCoins}',
-                                  style: GoogleFonts.bodoniModa(
-                                    fontSize: 40,
-                                    fontWeight: FontWeight.w900,
-                                    color: AppColors.onSurface,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.baseline,
+                                textBaseline: TextBaseline.alphabetic,
+                                children: [
+                                  Text(
+                                    '${coins.totalCoins}',
+                                    style: GoogleFonts.bodoniModa(
+                                      fontSize: 38,
+                                      fontWeight: FontWeight.w900,
+                                      color: AppColors.onSurface,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Coins',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.deepPurpleAlt,
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Coins',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.deepPurpleAlt,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Redemption value ≈ ₹${coins.rupeeEquivalent.toStringAsFixed(2)}',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11,
-                                color: AppColors.onSurfaceVariant,
+                                ],
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 2),
+                              Text(
+                                'Redemption value ≈ ₹${coins.rupeeEquivalent.toStringAsFixed(2)}',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  color: AppColors.onSurfaceVariant,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         ElevatedButton.icon(
                           onPressed: () {},
                           icon: const Icon(
@@ -372,13 +382,17 @@ class _CampusCoinsScreenState extends State<CampusCoinsScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Next tier: Merch Champion (1,500)',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11,
-                            color: AppColors.onSurfaceVariant,
+                        Expanded(
+                          child: Text(
+                            'Next tier: Merch Champion (1,500)',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              color: AppColors.onSurfaceVariant,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        const SizedBox(width: 8),
                         Text(
                           '82%',
                           style: GoogleFonts.plusJakartaSans(

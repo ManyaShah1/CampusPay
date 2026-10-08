@@ -45,6 +45,8 @@ dependencies:
   permission_handler: ^11.3.1
   # url_launcher for ACTION_DIAL fallback when USSD permission is denied
   url_launcher: ^6.3.0
+  mobile_scanner: ^7.4.2
+  razorpay_flutter: ^1.4.7
 
 dev_dependencies:
   flutter_test:

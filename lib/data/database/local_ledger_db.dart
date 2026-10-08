@@ -23,8 +23,8 @@ class LocalLedgerDb {
   }
 
   void _initializeInitialState() {
-    // Initial student wallet balance: ₹850.00 encrypted with AES-256
-    _encryptedBalance = _vault.encrypt('850.00');
+    // Initial student wallet balance: ₹0.00 encrypted with AES-256
+    _encryptedBalance = _vault.encrypt('0.00');
 
     // Generate batch of 10 pre-authorized ECDSA tokens (48hr validity)
     final now = DateTime.now().millisecondsSinceEpoch;

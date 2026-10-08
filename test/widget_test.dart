@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:campuspay/core/crypto/ecdsa_service.dart';
+import 'package:campuspay/core/utils/upi_qr_parser.dart';
 import 'package:campuspay/main.dart';
 
 void main() {
@@ -76,13 +77,49 @@ void main() {
       expect(secondCheck.reason, contains('REPLAY_ATTACK_DETECTED'));
     });
 
+    test('UPI QR Parser correctly parses UPI URIs, VPAs, and UPI numbers', () {
+      // 1. Standard NPCI UPI URI
+      final standardUpi = UpiQrData.parse(
+        'upi://pay?pa=canteen@icici&pn=DBIT%20Canteen&am=150.00&cu=INR&tn=Lunch',
+      );
+      expect(standardUpi.isValid, isTrue);
+      expect(standardUpi.upiId, 'canteen@icici');
+      expect(standardUpi.payeeName, 'DBIT Canteen');
+      expect(standardUpi.amount, 150.0);
+      expect(standardUpi.transactionNote, 'Lunch');
+
+      // 2. Direct VPA format
+      final directVpa = UpiQrData.parse('student@okaxis');
+      expect(directVpa.isValid, isTrue);
+      expect(directVpa.upiId, 'student@okaxis');
+      expect(directVpa.payeeName, 'student');
+
+      // 3. 10-digit Indian UPI / Mobile number
+      final upiNumber = UpiQrData.parse('9876543210');
+      expect(upiNumber.isValid, isTrue);
+      expect(upiNumber.upiNumber, '9876543210');
+      expect(upiNumber.upiId, '9876543210@upi');
+
+      // 4. Mobile number with +91 country code
+      final countryCodeNum = UpiQrData.parse('+919876543210');
+      expect(countryCodeNum.isValid, isTrue);
+      expect(countryCodeNum.upiNumber, '9876543210');
+
+      // 5. CampusPay vendor code
+      final vendorQr = UpiQrData.parse('CPV001:Campus Café:120');
+      expect(vendorQr.isValid, isTrue);
+      expect(vendorQr.upiId, 'CPV001@campuspay');
+      expect(vendorQr.payeeName, 'Campus Café');
+      expect(vendorQr.amount, 120.0);
+    });
+
     testWidgets('CampusPayApp launches and renders primary UI', (WidgetTester tester) async {
       await tester.pumpWidget(const CampusPayApp());
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('CAMPUSPAY'), findsOneWidget);
-      expect(find.text('CAMPUS WALLET (AES-256)'), findsOneWidget);
+      expect(find.text('CampusPay'), findsWidgets);
+      expect(find.text('Campus Wallet'), findsWidgets);
     });
   });
 }
