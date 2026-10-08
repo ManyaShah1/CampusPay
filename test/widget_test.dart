@@ -113,8 +113,17 @@ void main() {
       expect(vendorQr.amount, 120.0);
     });
 
-    testWidgets('CampusPayApp launches and renders primary UI', (WidgetTester tester) async {
-      await tester.pumpWidget(const CampusPayApp());
+    testWidgets('CampusPayApp launches and renders Onboarding screen when first run', (WidgetTester tester) async {
+      await tester.pumpWidget(const CampusPayApp(initialOnboardingCompleted: false));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Get Started'), findsOneWidget);
+      expect(find.text('Skip'), findsOneWidget);
+    });
+
+    testWidgets('CampusPayApp launches MainNavigationScreen and renders primary UI when onboarding complete', (WidgetTester tester) async {
+      await tester.pumpWidget(const CampusPayApp(initialOnboardingCompleted: true));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 

@@ -8,13 +8,19 @@ import 'ui/viewmodels/soundbox_viewmodel.dart';
 import 'ui/viewmodels/wallet_viewmodel.dart';
 import 'ui/viewmodels/ussd_viewmodel.dart';
 
-void main() {
+import 'core/services/onboarding_service.dart';
+import 'ui/screens/onboarding_screen.dart';
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const CampusPayApp());
+  final isOnboardingCompleted = await OnboardingService.isOnboardingCompleted();
+  runApp(CampusPayApp(initialOnboardingCompleted: isOnboardingCompleted));
 }
 
 class CampusPayApp extends StatelessWidget {
-  const CampusPayApp({super.key});
+  final bool initialOnboardingCompleted;
+
+  const CampusPayApp({super.key, this.initialOnboardingCompleted = false});
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +36,9 @@ class CampusPayApp extends StatelessWidget {
         title: 'CampusPay DBIT',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
-        home: const MainNavigationScreen(),
+        home: initialOnboardingCompleted
+            ? const MainNavigationScreen()
+            : const OnboardingScreen(),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../viewmodels/wallet_viewmodel.dart';
 import 'token_vault_screen.dart';
+import 'onboarding_screen.dart';
 
 class ProfileSettingsScreen extends StatelessWidget {
   const ProfileSettingsScreen({super.key});
@@ -377,6 +378,19 @@ class ProfileSettingsScreen extends StatelessWidget {
                 title: 'Notifications Center',
                 subtitle: 'Bill splits, campus alerts & receipts',
                 onTap: () {},
+              ),
+              const SizedBox(height: 8),
+
+              _buildSettingsTile(
+                icon: Icons.explore_rounded,
+                title: 'Replay App Tour & Onboarding',
+                subtitle: 'Walk through features and visual guide',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+                  );
+                },
               ),
               const SizedBox(height: 8),
 

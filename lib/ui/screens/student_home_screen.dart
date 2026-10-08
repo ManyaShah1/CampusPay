@@ -10,15 +10,19 @@ import 'p2p_transfer_screen.dart';
 import 'scan_and_pay_screen.dart';
 import 'token_vault_screen.dart';
 import 'ussd_session_screen.dart';
+import '../../core/services/onboarding_service.dart';
+import '../widgets/home_tour_overlay.dart';
 
 class StudentHomeScreen extends StatefulWidget {
   final VoidCallback? onNavigateToHistory;
   final VoidCallback? onNavigateToRewards;
+  final bool initialShowTour;
 
   const StudentHomeScreen({
     super.key,
     this.onNavigateToHistory,
     this.onNavigateToRewards,
+    this.initialShowTour = false,
   });
 
   @override
@@ -27,12 +31,25 @@ class StudentHomeScreen extends StatefulWidget {
 
 class _StudentHomeScreenState extends State<StudentHomeScreen> {
   bool _nfcPulseActive = false;
+  bool _showTour = false;
   late final RazorpayService _razorpayService;
 
   @override
   void initState() {
     super.initState();
     _initRazorpay();
+    _checkTourStatus();
+  }
+
+  void _checkTourStatus() async {
+    if (widget.initialShowTour) {
+      if (mounted) setState(() => _showTour = true);
+    } else {
+      final completed = await OnboardingService.isTourCompleted();
+      if (!completed && mounted) {
+        setState(() => _showTour = true);
+      }
+    }
   }
 
   void _initRazorpay() {
@@ -431,11 +448,13 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     return Scaffold(
       backgroundColor: AppColors.backgroundBlack,
       appBar: _buildHeader(context),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async => walletVM.refresh(),
-          color: AppColors.electricYellow,
-          backgroundColor: AppColors.cardDark,
+      body: Stack(
+        children: [
+          SafeArea(
+            child: RefreshIndicator(
+              onRefresh: () async => walletVM.refresh(),
+              color: AppColors.electricYellow,
+              backgroundColor: AppColors.cardDark,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(
               parent: BouncingScrollPhysics(),
@@ -1225,7 +1244,15 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           ),
         ),
       ),
-    );
+      if (_showTour)
+        Positioned.fill(
+          child: HomeTourOverlay(
+            onFinish: () => setState(() => _showTour = false),
+          ),
+        ),
+    ],
+  ),
+);
   }
 
   PreferredSizeWidget _buildHeader(BuildContext context) {
@@ -1298,6 +1325,15 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
         ],
       ),
       actions: [
+        IconButton(
+          onPressed: () => setState(() => _showTour = true),
+          icon: const Icon(
+            Icons.help_outline_rounded,
+            size: 20,
+            color: AppColors.onSurface,
+          ),
+          tooltip: 'App Tour',
+        ),
         Container(
           width: 36,
           height: 36,
