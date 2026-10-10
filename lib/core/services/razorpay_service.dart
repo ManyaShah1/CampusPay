@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'env_service.dart';
 
 /// Service managing Razorpay checkout lifecycle for Campus Wallet top-ups.
 class RazorpayService {
@@ -13,8 +14,8 @@ class RazorpayService {
   double _pendingAmount = 0.0;
 
   RazorpayService({
-    this.keyId = 'rzp_test_1DP5mmOlF5G5ag', // Default test key ID
-  }) {
+    String? keyId,
+  }) : keyId = keyId ?? EnvService.razorpayKeyId {
     _initRazorpay();
   }
 
