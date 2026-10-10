@@ -182,7 +182,7 @@ class SoundBoxScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Payer: ${soundboxVM.lastVerifiedPayload!.payerName}',
+                            'Payer: ${soundboxVM.lastVerifiedPayload!.merchantName}',
                             style: const TextStyle(
                               fontFamily: 'JetBrainsMono',
                               fontSize: 12,

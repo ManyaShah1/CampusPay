@@ -59,6 +59,15 @@ class BleP2pTransport {
       );
 
       await _centralManager.connect(peripheral);
+      try {
+  final mtu = await _centralManager.requestMTU(
+    peripheral,
+    mtu: 247,
+  );
+  debugPrint('[BLE-P2P] Negotiated MTU: $mtu');
+} catch (e) {
+  debugPrint('[BLE-P2P] MTU request failed: $e');
+}
 
       _connectedPeripheral = peripheral;
 
@@ -154,12 +163,38 @@ class BleP2pTransport {
         '[BLE-P2P] $payloadJson',
       );
 
-      await _centralManager.writeCharacteristic(
-        peripheral,
-        paymentCharacteristic,
-        value: payloadBytes,
-        type: GATTCharacteristicWriteType.withResponse,
+            
+      const int chunkDataSize = 120;
+      final String messageId =
+          DateTime.now().microsecondsSinceEpoch.toRadixString(36);
+
+      // Base64 keeps each chunk safe to transmit as text.
+      final String encodedPayload = base64Encode(payloadBytes);
+      final int totalChunks =
+          (encodedPayload.length + chunkDataSize - 1) ~/ chunkDataSize;
+
+      for (int i = 0; i < totalChunks; i++) {
+        final int start = i * chunkDataSize;
+        final int end = (start + chunkDataSize < encodedPayload.length)
+            ? start + chunkDataSize
+            : encodedPayload.length;
+
+        final String chunkData = encodedPayload.substring(start, end);
+        final String framedChunk =
+            'CP1|$messageId|$i|$totalChunks|$chunkData';
+
+        await _centralManager.writeCharacteristic(
+          peripheral,
+          paymentCharacteristic,
+          value: Uint8List.fromList(utf8.encode(framedChunk)),
+          type: GATTCharacteristicWriteType.withResponse,
+        );
+      }
+
+      debugPrint(
+        '[BLE-P2P] Sent $totalChunks framed payload chunks',
       );
+
 
       debugPrint(
         '[BLE-P2P] Payment payload written successfully',

@@ -1,7 +1,6 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:bluetooth_low_energy/bluetooth_low_energy.dart';
 import 'package:flutter/foundation.dart';
@@ -46,6 +45,9 @@ class BlePaymentCarrier {
   bool _initialized = false;
 
   final Set<String> _receivedNonces = <String>{};
+
+  final Map<String, List<String>> _chunkBuffers = {};
+  final Map<String, int> _chunkTotals = {};
 
   Future<void> initialize() async {
     try {
@@ -115,42 +117,110 @@ class BlePaymentCarrier {
             return;
           }
 
+          
           final receivedData = eventArgs.request.value;
-          final receivedText = String.fromCharCodes(receivedData);
+          final receivedText = utf8.decode(receivedData);
 
           debugPrint(
             '[BLE] Received ${receivedData.length} bytes',
           );
-          debugPrint('[BLE] Received bytes: $receivedData');
           debugPrint('[BLE] Received text: $receivedText');
 
           try {
-            // ACKNOWLEDGE THE GATT WRITE
+            // Acknowledge each individual GATT write.
             await _peripheralManager.respondWriteRequest(
               eventArgs.request,
             );
 
-            debugPrint(
-              '[BLE] Write request acknowledged successfully',
-            );
+            debugPrint('[BLE] GATT write acknowledged');
 
-            // PARSE PAYMENT PAYLOAD
-            Map<String, dynamic> paymentData;
+            // Expect: CP1|messageId|chunkIndex|totalChunks|base64Data
+            final parts = receivedText.split('|');
 
-            try {
-              final decoded = jsonDecode(receivedText);
-
-              if (decoded is! Map) {
-                throw const FormatException(
-                  'Payment payload is not a JSON object.',
-                );
-              }
-
-              paymentData = Map<String, dynamic>.from(decoded);
-            } catch (e) {
-              debugPrint('[BLE] Invalid payment JSON: $e');
+            if (parts.length != 5 || parts[0] != 'CP1') {
+              debugPrint('[BLE] Invalid chunk frame');
               return;
             }
+
+            final messageId = parts[1];
+            final chunkIndex = int.tryParse(parts[2]);
+            final totalChunks = int.tryParse(parts[3]);
+            final chunkData = parts[4];
+
+            if (messageId.isEmpty ||
+                chunkIndex == null ||
+                totalChunks == null ||
+                totalChunks < 1 ||
+                totalChunks > 200 ||
+                chunkIndex < 0 ||
+                chunkIndex >= totalChunks ||
+                chunkData.isEmpty) {
+              debugPrint('[BLE] Invalid chunk metadata');
+              return;
+            }
+
+            // Create a buffer for this message.
+            if (!_chunkBuffers.containsKey(messageId)) {
+              _chunkBuffers[messageId] =
+                  List<String>.filled(totalChunks, '');
+              _chunkTotals[messageId] = totalChunks;
+            }
+
+            final buffer = _chunkBuffers[messageId]!;
+
+            if (_chunkTotals[messageId] != totalChunks ||
+                buffer.length != totalChunks) {
+              _chunkBuffers.remove(messageId);
+              _chunkTotals.remove(messageId);
+              debugPrint('[BLE] Inconsistent chunk count; discarded');
+              return;
+            }
+
+            // Store this chunk. Ignore duplicate chunks safely.
+            if (buffer[chunkIndex].isEmpty) {
+              buffer[chunkIndex] = chunkData;
+            }
+
+            final receivedCount =
+                buffer.where((chunk) => chunk.isNotEmpty).length;
+
+            debugPrint(
+              '[BLE] Received chunk ${chunkIndex + 1}/$totalChunks '
+              'for message $messageId',
+            );
+
+            // Wait until every chunk has arrived.
+            if (receivedCount != totalChunks) {
+              return;
+            }
+
+            // Remove buffered state before processing the full message.
+            final completeEncodedPayload = buffer.join();
+            _chunkBuffers.remove(messageId);
+            _chunkTotals.remove(messageId);
+
+            // Reconstruct the original UTF-8 JSON.
+            final completeBytes = base64Decode(completeEncodedPayload);
+            final completeText = utf8.decode(completeBytes);
+
+            debugPrint(
+              '[BLE] Reassembled complete payload: '
+              '${completeBytes.length} bytes',
+            );
+
+            // PARSE COMPLETE PAYMENT PAYLOAD
+            final decoded = jsonDecode(completeText);
+
+            if (decoded is! Map) {
+              throw const FormatException(
+                'Payment payload is not a JSON object.',
+              );
+            }
+
+            final Map<String, dynamic> paymentData =
+                Map<String, dynamic>.from(decoded);
+
+
 
             // EXTRACT REQUIRED FIELDS
             final tokenId = paymentData['token_id']?.toString();
@@ -272,10 +342,12 @@ class BlePaymentCarrier {
             debugPrint('[BLE] Nonce: $nonce');
 
             // SEND BLE ACK
-            final acknowledgementData =
-                Map<String, dynamic>.from(paymentData);
-
-            acknowledgementData['receiver_status'] = 'accepted';
+                      // SEND BLE ACK
+            final acknowledgementData = <String, dynamic>{
+              'receiver_status': 'accepted',
+              'token_id': tokenId,
+              'nonce': nonce,
+            };
 
             final acknowledgementPayload =
                 jsonEncode(acknowledgementData);

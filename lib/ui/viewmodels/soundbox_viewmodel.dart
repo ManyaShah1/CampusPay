@@ -56,7 +56,7 @@ class SoundBoxViewModel extends ChangeNotifier {
           timestamp: payload.timestamp,
           nonce: payload.nonce,
           signature: payload.payerSignature,
-          tokenExpiry: payload.tokenExpiry,
+          tokenExpiry: payload.expiryTimestamp,
         );
 
         _lastVerifiedPayload = payload;
@@ -68,7 +68,7 @@ class SoundBoxViewModel extends ChangeNotifier {
             txnId: 'SB-TXN-${payload.nonce.substring(0, 6).toUpperCase()}',
             tokenId: payload.tokenId,
             merchantId: payload.merchantId,
-            merchantName: payload.payerName,
+            merchantName: payload.merchantName,
             amount: payload.amount,
             timestamp: DateTime.now().millisecondsSinceEpoch,
             channel: PaymentChannel.ultrasonicFsk,
