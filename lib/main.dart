@@ -6,7 +6,6 @@ import 'core/ble/ble_payment_carrier.dart';
 import 'core/constants/app_theme.dart';
 import 'core/services/env_service.dart';
 import 'core/services/onboarding_service.dart';
-import 'ui/screens/main_navigation_screen.dart';
 import 'ui/screens/onboarding_screen.dart';
 import 'ui/auth/login_screen.dart';
 import 'ui/viewmodels/p2p_viewmodel.dart';

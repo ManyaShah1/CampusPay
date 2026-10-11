@@ -309,10 +309,11 @@ class _LoginSignupPageState extends State<LoginSignupPage> {
                           ),
                           const SizedBox(height: 16),
 
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
-                              Text(_isLogin ? "Don't have an account?" : 'Already have an account?'),
+                              Text(_isLogin ? "Don't have an account? " : 'Already have an account? '),
                               TextButton(
                                 onPressed: () => setState(() => _isLogin = !_isLogin),
                                 child: Text(
