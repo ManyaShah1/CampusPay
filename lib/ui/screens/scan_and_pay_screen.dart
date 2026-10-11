@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/upi_qr_parser.dart';
 import 'enter_amount_screen.dart';
 
 class ScanAndPayScreen extends StatefulWidget {
@@ -14,7 +18,10 @@ class _ScanAndPayScreenState extends State<ScanAndPayScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _laserController;
   late Animation<double> _laserAnimation;
+  late MobileScannerController _cameraController;
   bool _isTorchOn = false;
+  bool _isProcessingScan = false;
+  UpiQrData? _lastScannedPayee;
   int _selectedRouteIndex = 1; // 0: Online UPI, 1: Offline SoundBox, 2: USSD
 
   @override
@@ -28,21 +35,132 @@ class _ScanAndPayScreenState extends State<ScanAndPayScreen>
     _laserAnimation = Tween<double>(begin: 0.15, end: 0.85).animate(
       CurvedAnimation(parent: _laserController, curve: Curves.easeInOut),
     );
+
+    _cameraController = MobileScannerController(
+      detectionSpeed: DetectionSpeed.noDuplicates,
+      facing: CameraFacing.back,
+      torchEnabled: false,
+    );
   }
 
   @override
   void dispose() {
     _laserController.dispose();
+    _cameraController.dispose();
     super.dispose();
   }
 
-  void _navigateToEnterAmount({
+  Future<void> _toggleTorch() async {
+    try {
+      await _cameraController.toggleTorch();
+      setState(() {
+        _isTorchOn = !_isTorchOn;
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _switchCamera() async {
+    try {
+      await _cameraController.switchCamera();
+    } catch (_) {}
+  }
+
+  void _onBarcodeDetected(BarcodeCapture capture) {
+    if (_isProcessingScan) return;
+    for (final barcode in capture.barcodes) {
+      final raw = barcode.rawValue;
+      if (raw != null && raw.trim().isNotEmpty) {
+        _processScannedCode(raw.trim());
+        break;
+      }
+    }
+  }
+
+  void _processScannedCode(String rawCode) {
+    if (_isProcessingScan) return;
+    _isProcessingScan = true;
+    HapticFeedback.heavyImpact();
+
+    final upiData = UpiQrData.parse(rawCode);
+
+    setState(() {
+      _lastScannedPayee = upiData;
+    });
+
+    final displayName = upiData.payeeName ?? upiData.displayIdentifier;
+    final displayId = upiData.upiId ?? upiData.upiNumber ?? 'UPI-PAY';
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: AppColors.surfaceContainerHigh,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: const BorderSide(color: AppColors.electricYellow, width: 1.2),
+        ),
+        content: Row(
+          children: [
+            const Icon(
+              Icons.qr_code_scanner_rounded,
+              color: AppColors.electricYellow,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Scanned: $displayName',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.white,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    'UPI: $displayId',
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 11,
+                      color: AppColors.electricYellow,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    _navigateToEnterAmount(
+      merchantName: displayName,
+      counter: upiData.upiId != null ? 'UPI Terminal' : 'Counter 1',
+      vendorId: displayId,
+      defaultAmount: upiData.amount ?? 120.0,
+      upiId: upiData.upiId,
+      upiNumber: upiData.upiNumber,
+      transactionNote: upiData.transactionNote,
+    );
+  }
+
+  Future<void> _navigateToEnterAmount({
     String merchantName = 'Campus Café',
     String counter = 'Counter 3',
     String vendorId = 'CPV001',
     double defaultAmount = 120.0,
-  }) {
-    Navigator.push(
+    String? upiId,
+    String? upiNumber,
+    String? transactionNote,
+  }) async {
+    _isProcessingScan = true;
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => EnterAmountScreen(
@@ -50,9 +168,18 @@ class _ScanAndPayScreenState extends State<ScanAndPayScreen>
           counter: counter,
           vendorId: vendorId,
           initialAmount: defaultAmount,
+          upiId: upiId,
+          upiNumber: upiNumber,
+          transactionNote: transactionNote,
         ),
       ),
     );
+    if (mounted) {
+      setState(() {
+        _isProcessingScan = false;
+        _lastScannedPayee = null;
+      });
+    }
   }
 
   @override
@@ -72,28 +199,33 @@ class _ScanAndPayScreenState extends State<ScanAndPayScreen>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Scan & Pay',
-                        style: GoogleFonts.bodoniModa(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.onSurface,
-                          letterSpacing: -0.5,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Scan & Pay',
+                          style: GoogleFonts.bodoniModa(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.onSurface,
+                            letterSpacing: -0.5,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Scan any campus merchant QR or vendor SoundBox',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          color: AppColors.onSurfaceVariant,
+                        const SizedBox(height: 2),
+                        Text(
+                          'Scan any campus merchant QR or vendor SoundBox',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 12),
                   Container(
                     width: 40,
                     height: 40,
@@ -195,47 +327,59 @@ class _ScanAndPayScreenState extends State<ScanAndPayScreen>
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Center(
-                child: GestureDetector(
-                  onTap: () => _navigateToEnterAmount(),
-                  child: Container(
-                    width: double.infinity,
-                    constraints: const BoxConstraints(maxWidth: 340),
-                    height: 340,
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceContainerLowest,
-                      borderRadius: BorderRadius.circular(28),
-                      border: Border.all(color: AppColors.borderStroke, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.6),
-                          blurRadius: 28,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
+                child: Container(
+                  width: double.infinity,
+                  constraints: const BoxConstraints(maxWidth: 340),
+                  height: 340,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceContainerLowest,
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(color: AppColors.borderStroke, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        blurRadius: 28,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(26),
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
+                        // Live MobileScanner Camera Feed
+                        Positioned.fill(
+                          child: MobileScanner(
+                            controller: _cameraController,
+                            fit: BoxFit.cover,
+                            onDetect: _onBarcodeDetected,
+                            errorBuilder: (context, error) {
+                              return _buildCameraFallback(error);
+                            },
+                          ),
+                        ),
+
+                        // Dimmed Vignette Overlay surrounding scanning square
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.25),
+                            ),
+                          ),
+                        ),
+
                         // Viewfinder Reticle Frame
                         Container(
                           width: 230,
                           height: 230,
                           decoration: BoxDecoration(
-                            color: AppColors.surfaceContainerLow.withValues(
-                              alpha: 0.5,
-                            ),
+                            color: Colors.transparent,
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Stack(
                             alignment: Alignment.center,
                             children: [
-                              // Center QR watermark icon
-                              Icon(
-                                Icons.qr_code_2_rounded,
-                                size: 120,
-                                color: AppColors.white.withValues(alpha: 0.15),
-                              ),
-
                               // Neon Corner Brackets
                               ..._buildCornerBrackets(),
 
@@ -265,7 +409,7 @@ class _ScanAndPayScreenState extends State<ScanAndPayScreen>
                                 },
                               ),
 
-                              // Target Locked status pill
+                              // Scanning / Detected status pill
                               Positioned(
                                 bottom: 12,
                                 child: Container(
@@ -274,10 +418,12 @@ class _ScanAndPayScreenState extends State<ScanAndPayScreen>
                                     vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.black.withValues(alpha: 0.7),
+                                    color: Colors.black.withValues(alpha: 0.75),
                                     borderRadius: BorderRadius.circular(9999),
                                     border: Border.all(
-                                      color: AppColors.borderStroke,
+                                      color: _lastScannedPayee != null
+                                          ? AppColors.successGreen
+                                          : AppColors.borderStroke,
                                     ),
                                   ),
                                   child: Row(
@@ -286,14 +432,18 @@ class _ScanAndPayScreenState extends State<ScanAndPayScreen>
                                       Container(
                                         width: 6,
                                         height: 6,
-                                        decoration: const BoxDecoration(
-                                          color: AppColors.electricYellow,
+                                        decoration: BoxDecoration(
+                                          color: _lastScannedPayee != null
+                                              ? AppColors.successGreen
+                                              : AppColors.electricYellow,
                                           shape: BoxShape.circle,
                                         ),
                                       ),
                                       const SizedBox(width: 6),
                                       Text(
-                                        'TARGET LOCKED',
+                                        _lastScannedPayee != null
+                                            ? 'UPI DETECTED'
+                                            : 'SCANNING UPI QR',
                                         style: GoogleFonts.jetBrainsMono(
                                           fontSize: 10,
                                           fontWeight: FontWeight.w700,
@@ -316,15 +466,18 @@ class _ScanAndPayScreenState extends State<ScanAndPayScreen>
                           child: Row(
                             children: [
                               GestureDetector(
-                                onTap: () => setState(() => _isTorchOn = !_isTorchOn),
+                                onTap: _toggleTorch,
                                 child: Container(
                                   width: 38,
                                   height: 38,
                                   decoration: BoxDecoration(
                                     color: _isTorchOn
                                         ? AppColors.electricYellow
-                                        : Colors.white.withValues(alpha: 0.15),
+                                        : Colors.black.withValues(alpha: 0.5),
                                     shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: AppColors.borderStroke,
+                                    ),
                                   ),
                                   child: Icon(
                                     _isTorchOn
@@ -338,17 +491,23 @@ class _ScanAndPayScreenState extends State<ScanAndPayScreen>
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              Container(
-                                width: 38,
-                                height: 38,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.15),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.flip_camera_android_rounded,
-                                  size: 18,
-                                  color: AppColors.white,
+                              GestureDetector(
+                                onTap: _switchCamera,
+                                child: Container(
+                                  width: 38,
+                                  height: 38,
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.5),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: AppColors.borderStroke,
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.flip_camera_android_rounded,
+                                    size: 18,
+                                    color: AppColors.white,
+                                  ),
                                 ),
                               ),
                             ],
@@ -357,36 +516,36 @@ class _ScanAndPayScreenState extends State<ScanAndPayScreen>
 
                         // Bottom alignment instructions
                         Positioned(
-                          bottom: 16,
+                          bottom: 14,
                           left: 16,
                           right: 16,
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                'ALIGN QR INSIDE FRAME',
+                                'ALIGN UPI QR CODE INSIDE FRAME',
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 11,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.w800,
                                   color: AppColors.white,
-                                  letterSpacing: 1.2,
+                                  letterSpacing: 1.1,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 3),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   const Icon(
                                     Icons.graphic_eq_rounded,
-                                    size: 14,
+                                    size: 13,
                                     color: AppColors.electricYellow,
                                   ),
                                   const SizedBox(width: 4),
                                   Flexible(
                                     child: Text(
-                                      '((•)) Acoustic Ultrasound sync listening (18.4 kHz)...',
+                                      'Acoustic Ultrasound sync listening (18.4 kHz)...',
                                       style: GoogleFonts.plusJakartaSans(
                                         fontSize: 10,
                                         color: AppColors.electricYellow,
@@ -581,7 +740,7 @@ class _ScanAndPayScreenState extends State<ScanAndPayScreen>
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: () => _navigateToEnterAmount(),
+                  onPressed: _showManualUpiEntryModal,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.surfaceContainerLow,
                     foregroundColor: AppColors.white,
@@ -955,5 +1114,271 @@ class _ScanAndPayScreenState extends State<ScanAndPayScreen>
         ),
       ),
     ];
+  }
+
+  Widget _buildCameraFallback(MobileScannerException error) {
+    final isPermission =
+        error.errorCode == MobileScannerErrorCode.permissionDenied;
+    return Container(
+      color: AppColors.surfaceContainerLowest,
+      padding: const EdgeInsets.all(20),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isPermission
+                  ? Icons.videocam_off_rounded
+                  : Icons.camera_alt_outlined,
+              size: 42,
+              color: AppColors.electricYellow,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              isPermission
+                  ? 'Camera Permission Required'
+                  : 'Camera Initializing or Unavailable',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppColors.white,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              isPermission
+                  ? 'Please grant camera access in settings to scan UPI QR codes.'
+                  : 'Point camera at any UPI or campus QR code to pay.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 14),
+            if (isPermission)
+              ElevatedButton.icon(
+                onPressed: () => openAppSettings(),
+                icon: const Icon(Icons.settings_rounded, size: 14),
+                label: const Text('Open Settings'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.electricYellow,
+                  foregroundColor: AppColors.onElectricYellow,
+                  textStyle: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              )
+            else
+              OutlinedButton.icon(
+                onPressed: () => _processScannedCode(
+                  'upi://pay?pa=campuscafe@icici&pn=Campus%20Caf%C3%A9&am=120&cu=INR',
+                ),
+                icon: const Icon(
+                  Icons.qr_code_rounded,
+                  size: 14,
+                  color: AppColors.electricYellow,
+                ),
+                label: Text(
+                  'Test UPI QR Scan',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    color: AppColors.electricYellow,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppColors.electricYellow),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showManualUpiEntryModal() {
+    final textController = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceContainerLowest,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (bottomSheetContext) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom:
+                MediaQuery.of(bottomSheetContext).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.borderStroke,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.alternate_email_rounded,
+                      color: AppColors.electricYellow,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Enter UPI ID or Number',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.onSurface,
+                        ),
+                      ),
+                      Text(
+                        'Supports VPA (e.g. alex@upi) or 10-digit mobile',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              TextField(
+                controller: textController,
+                autofocus: true,
+                style: GoogleFonts.jetBrainsMono(
+                  color: AppColors.onSurface,
+                  fontSize: 14,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'e.g. 9876543210 or student@okaxis',
+                  hintStyle: GoogleFonts.jetBrainsMono(
+                    color: AppColors.onSurfaceVariant.withValues(alpha: 0.6),
+                    fontSize: 13,
+                  ),
+                  filled: true,
+                  fillColor: AppColors.surfaceContainerLow,
+                  prefixIcon: const Icon(
+                    Icons.qr_code_2_rounded,
+                    color: AppColors.lightPurple,
+                    size: 20,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide:
+                        const BorderSide(color: AppColors.borderStroke),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide:
+                        const BorderSide(color: AppColors.borderStroke),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(
+                      color: AppColors.electricYellow,
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildQuickPill('canteen@dbit', textController),
+                  _buildQuickPill('9876543210', textController),
+                  _buildQuickPill('nescafe@upi', textController),
+                  _buildQuickPill('xerox@campus', textController),
+                ],
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: () {
+                    final text = textController.text.trim();
+                    if (text.isEmpty) return;
+                    Navigator.pop(bottomSheetContext);
+                    _processScannedCode(text);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.electricYellow,
+                    foregroundColor: AppColors.onElectricYellow,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    'Proceed to Pay',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildQuickPill(
+    String value,
+    TextEditingController controller,
+  ) {
+    return GestureDetector(
+      onTap: () {
+        controller.text = value;
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.borderStroke),
+        ),
+        child: Text(
+          value,
+          style: GoogleFonts.jetBrainsMono(
+            fontSize: 11,
+            color: AppColors.lightPurple,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
   }
 }

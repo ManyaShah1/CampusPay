@@ -5,7 +5,6 @@
 
     <!-- Required to obtain subscriptionId for sendUssdRequest on multi-SIM devices -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-
     <!-- BLE permissions for Android 12+ -->
     <uses-permission
         android:name="android.permission.BLUETOOTH_SCAN"
@@ -20,6 +19,12 @@
         android:name="android.permission.ACCESS_FINE_LOCATION"
         android:maxSdkVersion="30" />
 
+    <!-- Required for scanning QR codes -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <!-- Required for Peer-to-Peer sound wave acoustic communication -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <application
         android:label="campuspay"
         android:name="${applicationName}"

@@ -15,7 +15,7 @@ class SoundBoxViewModel extends ChangeNotifier {
 
   bool _isListening = true;
   final bool _isBleActive = true;
-  String _lastAnnouncement = 'Device Ready • Listening on 18–22kHz FSK';
+  String _lastAnnouncement = 'Device Ready • Listening on 18–22kHz / 1.2–2.4kHz FSK';
   PaymentPayload? _lastVerifiedPayload;
   VerificationResult? _lastVerificationResult;
   List<TransactionRecord> _creditHistory = [];
@@ -42,6 +42,7 @@ class SoundBoxViewModel extends ChangeNotifier {
   }
 
   void _startListening() {
+    _acoustic.startListening();
     _packetSubscription = _acoustic.onUltrasonicPacketReceived.listen((packet) async {
       debugPrint('[SoundBoxVM] Ultrasonic packet caught: ₹${packet.amount}, Nonce: ${packet.nonce}');
 
@@ -99,12 +100,20 @@ class SoundBoxViewModel extends ChangeNotifier {
 
   void toggleListening() {
     _isListening = !_isListening;
+    if (_isListening) {
+      _acoustic.startListening();
+      _lastAnnouncement = 'Device Ready • Listening on 18–22kHz / 1.2–2.4kHz FSK';
+    } else {
+      _acoustic.stopListening();
+      _lastAnnouncement = 'Microphone Listener Paused';
+    }
     notifyListeners();
   }
 
   @override
   void dispose() {
     _packetSubscription?.cancel();
+    _acoustic.stopListening();
     super.dispose();
   }
 }

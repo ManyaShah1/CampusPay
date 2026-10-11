@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../viewmodels/wallet_viewmodel.dart';
 import 'offline_payment_screen.dart';
 
 class EnterAmountScreen extends StatefulWidget {
@@ -9,6 +11,9 @@ class EnterAmountScreen extends StatefulWidget {
   final String counter;
   final String vendorId;
   final double initialAmount;
+  final String? upiId;
+  final String? upiNumber;
+  final String? transactionNote;
 
   const EnterAmountScreen({
     super.key,
@@ -16,6 +21,9 @@ class EnterAmountScreen extends StatefulWidget {
     this.counter = 'Counter 3',
     this.vendorId = 'CPV001',
     this.initialAmount = 120.0,
+    this.upiId,
+    this.upiNumber,
+    this.transactionNote,
   });
 
   @override
@@ -96,6 +104,7 @@ class _EnterAmountScreenState extends State<EnterAmountScreen>
 
   @override
   Widget build(BuildContext context) {
+    final walletVM = context.watch<WalletViewModel>();
     final displayAmount = _amountStr.isEmpty ? '0' : _amountStr;
 
     return Scaffold(
@@ -180,17 +189,20 @@ class _EnterAmountScreenState extends State<EnterAmountScreen>
                             ],
                           ),
                           const SizedBox(height: 3),
-                          Row(
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 6,
                             children: [
                               Text(
-                                'Verified Campus Merchant',
+                                (widget.upiId != null || widget.upiNumber != null)
+                                    ? 'NPCI Verified UPI Payee'
+                                    : 'Verified Campus Merchant',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                   color: AppColors.lightPurple,
                                 ),
                               ),
-                              const SizedBox(width: 6),
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 6,
@@ -201,7 +213,10 @@ class _EnterAmountScreenState extends State<EnterAmountScreen>
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
-                                  widget.vendorId,
+                                  widget.upiId ??
+                                      (widget.upiNumber != null
+                                          ? 'UPI: ${widget.upiNumber}'
+                                          : widget.vendorId),
                                   style: GoogleFonts.jetBrainsMono(
                                     fontSize: 10,
                                     color: AppColors.white,
@@ -211,6 +226,20 @@ class _EnterAmountScreenState extends State<EnterAmountScreen>
                               ),
                             ],
                           ),
+                          if (widget.transactionNote != null &&
+                              widget.transactionNote!.isNotEmpty) ...[
+                            const SizedBox(height: 3),
+                            Text(
+                              'Note: ${widget.transactionNote}',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 10,
+                                fontStyle: FontStyle.italic,
+                                color: AppColors.onSurfaceVariant,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -342,7 +371,7 @@ class _EnterAmountScreenState extends State<EnterAmountScreen>
                 iconBg: AppColors.deepPurple.withValues(alpha: 0.4),
                 iconColor: AppColors.lightPurple,
                 title: 'Campus Wallet',
-                subtitle: 'Available: ₹2,450.00',
+                subtitle: 'Available: ₹${walletVM.balance.toStringAsFixed(2)}',
                 badgeText: 'Default',
               ),
               const SizedBox(height: 10),
