@@ -8,11 +8,13 @@ import 'ui/viewmodels/soundbox_viewmodel.dart';
 import 'ui/viewmodels/wallet_viewmodel.dart';
 import 'ui/viewmodels/ussd_viewmodel.dart';
 
+import 'core/services/env_service.dart';
 import 'core/services/onboarding_service.dart';
 import 'ui/screens/onboarding_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await EnvService.load();
   final isOnboardingCompleted = await OnboardingService.isOnboardingCompleted();
   runApp(CampusPayApp(initialOnboardingCompleted: isOnboardingCompleted));
 }
