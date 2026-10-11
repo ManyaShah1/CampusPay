@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../viewmodels/wallet_viewmodel.dart';
 import 'token_vault_screen.dart';
+import '../auth/login_signup_page.dart' show ProfileAuthButton;
 
 class ProfileSettingsScreen extends StatelessWidget {
   const ProfileSettingsScreen({super.key});
@@ -205,6 +206,9 @@ class ProfileSettingsScreen extends StatelessWidget {
                         elevation: 0,
                       ),
                     ),
+
+                    const SizedBox(height: 10),
+                    const ProfileAuthButton(),
                   ],
                 ),
               ),
@@ -231,7 +235,7 @@ class ProfileSettingsScreen extends StatelessWidget {
                       label: 'COINS',
                       value: '${walletVM.coinsState.totalCoins}',
                       sublabel:
-                          '₹${walletVM.coinsState.rupeeEquivalent.toStringAsFixed(0)} value',
+                      '₹${walletVM.coinsState.rupeeEquivalent.toStringAsFixed(0)} value',
                     ),
                   ),
                   const SizedBox(width: 8),
