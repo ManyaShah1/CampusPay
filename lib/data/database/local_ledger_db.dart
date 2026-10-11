@@ -1,3 +1,4 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/crypto/aes_vault.dart';
 import '../../core/crypto/ecdsa_service.dart';
@@ -20,11 +21,12 @@ class LocalLedgerDb {
 
   LocalLedgerDb._internal() {
     _initializeInitialState();
+    _loadFromStorage();
   }
 
   void _initializeInitialState() {
-    // Initial student wallet balance: ₹0.00 encrypted with AES-256
-    _encryptedBalance = _vault.encrypt('0.00');
+    // Default initial seed balance (₹250.00) encrypted with AES-256
+    _encryptedBalance = _vault.encrypt('250.00');
 
     // Generate batch of 10 pre-authorized ECDSA tokens (48hr validity)
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -99,6 +101,16 @@ class LocalLedgerDb {
     );
   }
 
+  void _loadFromStorage() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedEnc = prefs.getString('campuspay_encrypted_balance');
+      if (savedEnc != null && savedEnc.isNotEmpty) {
+        _encryptedBalance = savedEnc;
+      }
+    } catch (_) {}
+  }
+
   // Wallet operations
   double getDecryptedBalance() {
     try {
@@ -109,8 +121,12 @@ class LocalLedgerDb {
     }
   }
 
-  void updateBalance(double newBalance) {
+  void updateBalance(double newBalance) async {
     _encryptedBalance = _vault.encrypt(newBalance.toStringAsFixed(2));
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('campuspay_encrypted_balance', _encryptedBalance);
+    } catch (_) {}
   }
 
   // Token operations
@@ -161,6 +177,10 @@ class LocalLedgerDb {
   List<TransactionRecord> getSoundboxTransactions() => List.unmodifiable(_soundboxTransactions);
 
   void recordStudentDebit(TransactionRecord txn) {
+    _studentTransactions.insert(0, txn);
+  }
+
+  void recordStudentCredit(TransactionRecord txn) {
     _studentTransactions.insert(0, txn);
   }
 

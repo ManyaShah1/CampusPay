@@ -17,13 +17,21 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 
+import com.example.campuspay.audio.AcousticAudioEngine
+
 class MainActivity : FlutterActivity() {
 
     companion object {
         private const val METHOD_CHANNEL = "campuspay/ussd"
         private const val EVENT_CHANNEL  = "campuspay/ussd_events"
+        private const val AUDIO_METHOD_CHANNEL = "campuspay/audio"
+        private const val AUDIO_EVENT_CHANNEL  = "campuspay/audio_events"
         private const val REQUEST_CALL_PHONE = 1001
+        private const val REQUEST_RECORD_AUDIO = 1002
     }
+
+    private var audioEngine: AcousticAudioEngine? = null
+    private var pendingRecordPermissionResult: MethodChannel.Result? = null
 
     // Pending call while we wait for permission grant
     private var pendingUssdCode: String? = null
@@ -36,7 +44,67 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
-        // ── Event Channel (USSD response stream) ──────────────────────────────
+        // ── Acoustic Audio Engine Channels ────────────────────────────────────
+        val engine = AcousticAudioEngine(applicationContext)
+        audioEngine = engine
+
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, AUDIO_EVENT_CHANNEL)
+            .setStreamHandler(object : EventChannel.StreamHandler {
+                override fun onListen(args: Any?, sink: EventChannel.EventSink?) {
+                    engine.setEventSink(sink)
+                }
+                override fun onCancel(args: Any?) {
+                    engine.setEventSink(null)
+                }
+            })
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, AUDIO_METHOD_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "checkRecordPermission" -> {
+                        result.success(engine.checkRecordPermission())
+                    }
+                    "requestRecordPermission" -> {
+                        if (engine.checkRecordPermission()) {
+                            result.success(true)
+                        } else if (pendingRecordPermissionResult != null) {
+                            result.error("PERMISSION_REQUEST_IN_PROGRESS", "Microphone permission request is already in progress.", null)
+                        } else {
+                            pendingRecordPermissionResult = result
+                            ActivityCompat.requestPermissions(
+                                this,
+                                arrayOf(Manifest.permission.RECORD_AUDIO),
+                                REQUEST_RECORD_AUDIO
+                            )
+                        }
+                    }
+                    "initAudio" -> {
+                        val mode = call.argument<String>("mode") ?: "audible"
+                        engine.setMode(mode)
+                        result.success(true)
+                    }
+                    "startListening" -> {
+                        val mode = call.argument<String>("mode")
+                        if (mode != null) engine.setMode(mode)
+                        val diagnostic = call.argument<Boolean>("diagnostic") ?: false
+                        val started = engine.startListening(diagnostic)
+                        result.success(started)
+                    }
+                    "stopListening" -> {
+                        engine.stopListening()
+                        result.success(true)
+                    }
+                    "transmitAudio" -> {
+                        val payload = call.argument<String>("payload") ?: ""
+                        val mode = call.argument<String>("mode")
+                        result.success(engine.transmitAudio(payload, mode))
+                    }
+                    "transmitDiagnosticPing" -> {
+                        result.success(engine.transmitDiagnosticPing())
+                    }
+                    else -> result.notImplemented()
+                }
+            }
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, EVENT_CHANNEL)
             .setStreamHandler(object : EventChannel.StreamHandler {
                 override fun onListen(args: Any?, sink: EventChannel.EventSink?) {
@@ -123,6 +191,14 @@ class MainActivity : FlutterActivity() {
                 dialFallback(code)
                 result.success("fallback_dialer")
             }
+        } else if (requestCode == REQUEST_RECORD_AUDIO) {
+            val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
+            if (granted) {
+                pendingRecordPermissionResult?.success(true)
+            } else {
+                pendingRecordPermissionResult?.success(false)
+            }
+            pendingRecordPermissionResult = null
         }
     }
 

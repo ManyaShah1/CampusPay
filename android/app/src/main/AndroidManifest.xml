@@ -6,6 +6,9 @@
     <!-- Required for scanning QR codes -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <!-- Required for Peer-to-Peer sound wave acoustic communication -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <application
         android:label="campuspay"
         android:name="${applicationName}"

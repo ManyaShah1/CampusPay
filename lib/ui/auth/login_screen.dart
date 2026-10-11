@@ -12,7 +12,7 @@ class LoginScreen extends StatelessWidget {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => const MainNavigationScreen(),
+            builder: (_) => const MainNavigationScreen(startTour: true),
           ),
         );
       },

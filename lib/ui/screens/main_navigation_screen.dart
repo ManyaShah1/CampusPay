@@ -8,7 +8,9 @@ import 'student_home_screen.dart';
 import 'transactions_ledger_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
-  const MainNavigationScreen({super.key});
+  final bool startTour;
+
+  const MainNavigationScreen({super.key, this.startTour = false});
 
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
@@ -26,6 +28,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       StudentHomeScreen(
         onNavigateToHistory: () => setState(() => _currentIndex = 1),
         onNavigateToRewards: () => setState(() => _currentIndex = 3),
+        initialShowTour: widget.startTour,
       ),
       const TransactionsLedgerScreen(),
       const SizedBox.shrink(), // Center button placeholder
