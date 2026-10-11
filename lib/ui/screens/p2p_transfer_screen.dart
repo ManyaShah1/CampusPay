@@ -6,6 +6,8 @@ import '../viewmodels/p2p_viewmodel.dart';
 import '../viewmodels/wallet_viewmodel.dart';
 import '../widgets/fintech_card.dart';
 import '../widgets/transmission_wave_widget.dart';
+import 'dart:async';
+import '../../core/ble/ble_payment_carrier.dart';
 
 class P2pTransferScreen extends StatefulWidget {
   const P2pTransferScreen({super.key});
@@ -13,6 +15,7 @@ class P2pTransferScreen extends StatefulWidget {
   @override
   State<P2pTransferScreen> createState() => _P2pTransferScreenState();
 }
+
 
 class _P2pTransferScreenState extends State<P2pTransferScreen> {
   final TextEditingController _amountController =
@@ -27,14 +30,29 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
 
   late String _selectedPeer;
 
+  StreamSubscription<Map<String, dynamic>>? _paymentSubscription;
+  Map<String, dynamic>? _receivedPayment;
+  bool _showReceive = false;
+
   @override
   void initState() {
     super.initState();
     _selectedPeer = _peers[0];
+
+    _paymentSubscription =
+        BlePaymentCarrier().receivedPayments.listen((payment) {
+      if (!mounted) return;
+
+      setState(() {
+        _receivedPayment = payment;
+        _showReceive = true;
+      });
+    });
   }
 
   @override
   void dispose() {
+    _paymentSubscription?.cancel();
     _amountController.dispose();
     super.dispose();
   }
@@ -44,7 +62,8 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
     final p2pVM = context.watch<P2pViewModel>();
     final walletVM = context.watch<WalletViewModel>();
 
-    final isProcessing = p2pVM.state == P2pState.transmittingPayload ||
+    final isProcessing =
+        p2pVM.state == P2pState.transmittingPayload ||
         p2pVM.state == P2pState.waitingPeerAck;
 
     return Scaffold(
@@ -54,14 +73,159 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
-        child: isProcessing
-            ? _buildProcessingState(p2pVM)
-            : p2pVM.state == P2pState.committedSuccess
-                ? _buildSuccessState(context, p2pVM, walletVM)
-                : _buildInputState(context, p2pVM, walletVM),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      setState(() => _showReceive = false);
+                    },
+                    child: const Text('SEND MONEY'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      setState(() => _showReceive = true);
+                    },
+                    child: const Text('RECEIVE MONEY'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            if (_receivedPayment != null && _showReceive)
+              _buildReceiveState()
+            else if (_showReceive)
+              _buildReceiveState()
+            else if (isProcessing)
+              _buildProcessingState(p2pVM)
+            else if (p2pVM.state == P2pState.committedSuccess)
+              _buildSuccessState(context, p2pVM, walletVM)
+            else
+              _buildInputState(context, p2pVM, walletVM),
+          ],
+        ),
       ),
     );
   }
+
+  Widget _buildReceiveState() {
+    final payment = _receivedPayment;
+
+    if (payment == null) {
+      return Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.bluetooth_searching,
+              size: 64,
+              color: AppColors.lightPurple,
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'WAITING FOR PAYMENT',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppColors.white,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Keep this screen open while the other phone sends a BLE payment.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                color: AppColors.lightMutedText,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final amount = (payment['amount'] as num).toDouble();
+
+    return Column(
+      children: [
+        const SizedBox(height: 36),
+        const Icon(
+          Icons.check_circle,
+          size: 90,
+          color: AppColors.successGreen,
+        ),
+        const SizedBox(height: 18),
+        Text(
+          'PAYMENT RECEIVED',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: AppColors.successGreen,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          '₹${amount.toStringAsFixed(2)}',
+          style: GoogleFonts.bodoniModa(
+            fontSize: 46,
+            fontWeight: FontWeight.w800,
+            color: AppColors.white,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'From ${payment['sender_name'] ?? 'CampusPay user'}',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.plusJakartaSans(
+            color: AppColors.lightMutedText,
+          ),
+        ),
+        const SizedBox(height: 28),
+        FintechCard(
+          leftBorderColor: AppColors.lightPurple,
+          child: Column(
+            children: [
+              _row(
+                'TRANSACTION ID',
+                '${payment['transaction_id'] ?? 'BLE-P2P'}',
+              ),
+              const SizedBox(height: 12),
+              _row('STATUS', 'BLE ACK RECEIVED'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 28),
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _receivedPayment = null;
+              });
+            },
+            child: const Text('DONE'),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          'Local prototype demo · No real bank funds moved',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 11,
+            color: AppColors.mutedText,
+          ),
+        ),
+      ],
+    );
+  }
+
 
   Widget _buildInputState(
     BuildContext context,

@@ -13,6 +13,12 @@ class BlePaymentCarrier {
 
   BlePaymentCarrier._internal();
 
+  final StreamController<Map<String, dynamic>> _receivedPayments =
+    StreamController<Map<String, dynamic>>.broadcast();
+
+Stream<Map<String, dynamic>> get receivedPayments =>
+    _receivedPayments.stream;
+
   final CentralManager _centralManager = CentralManager();
   final PeripheralManager _peripheralManager = PeripheralManager();
 
@@ -332,6 +338,17 @@ class BlePaymentCarrier {
             // PAYMENT ACCEPTED
             // ECDSA signature verification is not performed here.
             _receivedNonces.add(nonce);
+
+            _receivedPayments.add({
+  'token_id': tokenId,
+  'amount': amount,
+  'sender_name': merchantName,
+  'merchant_id': merchantId,
+  'nonce': nonce,
+  'transaction_id':
+      'BLE-${nonce.substring(0, nonce.length < 8 ? nonce.length : 8)}',
+  'status': 'BLE ACK RECEIVED',
+});
 
             debugPrint('[BLE] P2P_RECEIVE payment accepted.');
             debugPrint('[BLE] Token ID: $tokenId');
