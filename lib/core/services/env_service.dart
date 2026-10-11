@@ -3,8 +3,8 @@ import 'package:flutter/services.dart';
 
 /// Service for loading environment variables from `.env` asset file
 class EnvService {
-  static String razorpayKeyId = 'rzp_test_TlXNu2KYBa3OOl';
-  static String razorpayKeySecret = 'zL3Jn5drnq9xyl2q3PER39Ll';
+  static String razorpayKeyId = '';
+  static String razorpayKeySecret = '';
 
   /// Load `.env` from app assets or fallback
   static Future<void> load() async {

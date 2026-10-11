@@ -1,20 +1,25 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
+
 import '../../core/audio/acoustic_carrier.dart';
 import '../../core/audio/p2p_message.dart';
+import '../../core/ble/ble_p2p_transport.dart';
 import '../../core/crypto/ecdsa_service.dart';
 import '../../data/database/local_ledger_db.dart';
+import '../../data/models/offline_token.dart';
 import '../../data/models/transaction_record.dart';
+import '../../data/repositories/token_repository.dart';
 
 enum P2pState {
   idle,
-  listening, // Receiver mode active
-  transmittingPayload, // Sender playing sound wave
-  waitingPeerAck, // Sender listening for acoustic ACK
-  retrying, // Bounded retry attempt
-  committedSuccess, // Both parties verified & acknowledged
-  failed, // Rejected or timeout
+  listening,
+  transmittingPayload,
+  waitingPeerAck,
+  retrying,
+  committedSuccess,
+  failed,
 }
 
 enum P2pRole {
@@ -25,6 +30,8 @@ enum P2pRole {
 class P2pViewModel extends ChangeNotifier {
   final EcdsaService _ecdsa = EcdsaService();
   final LocalLedgerDb _db = LocalLedgerDb();
+  final TokenRepository _tokenRepo = TokenRepository();
+  final BleP2pTransport _bleTransport = BleP2pTransport();
   final AcousticCarrier _acoustic = AcousticCarrier();
 
   P2pState _state = P2pState.idle;
@@ -105,7 +112,10 @@ class P2pViewModel extends ChangeNotifier {
       }
     });
     _p2pSubscription = _acoustic.onP2pMessageReceived.listen((msg) {
-      debugPrint('[P2pViewModel] Incoming P2P Message: Type ${msg.type}, Txn ${msg.txnId}, Status ${msg.status}');
+      debugPrint(
+        '[P2pViewModel] Incoming P2P Message: Type ${msg.type}, '
+        'Txn ${msg.txnId}, Status ${msg.status}',
+      );
       _lastReceivedP2pMessage = msg;
 
       if (_activeRole == P2pRole.receiver && msg.type == 'REQ') {
@@ -119,12 +129,12 @@ class P2pViewModel extends ChangeNotifier {
     });
   }
 
-  /// Receiver Mode: Handles incoming sound wave transfer request
+  /// Receiver Mode: Handles incoming sound-wave transfer requests.
   Future<void> _handleIncomingReceiverRequest(P2pMessage req) async {
     final now = DateTime.now().millisecondsSinceEpoch;
 
-    // A sender may retry because the first ACK was lost. Resend the ACK for
-    // an already credited request, without crediting the wallet a second time.
+    // If the sender retries after a lost ACK, resend the result without
+    // crediting this in-memory ledger twice.
     TransactionRecord? previousCredit;
     for (final txn in _db.getStudentTransactions()) {
       if (txn.nonce == req.nonce) {
@@ -149,17 +159,20 @@ class P2pViewModel extends ChangeNotifier {
       return;
     }
 
-    // 1. Validate Timestamp freshness (±5 mins window)
     const allowedSkewMs = 5 * 60 * 1000;
     if ((now - req.timestamp).abs() > allowedSkewMs) {
-      _statusMessage = 'REJECTED: Sound wave timestamp exceeds ±5min freshness window';
+      _statusMessage =
+          'REJECTED: Sound wave timestamp exceeds ±5min freshness window';
       _state = P2pState.failed;
       notifyListeners();
-      await _acoustic.emitAcousticAck(nonce: req.nonce, isSuccess: false, txnId: req.txnId);
+      await _acoustic.emitAcousticAck(
+        nonce: req.nonce,
+        isSuccess: false,
+        txnId: req.txnId,
+      );
       return;
     }
 
-    // 2. Validate Nonce (Anti-replay protection)
     final verifyResult = _ecdsa.verifyPayload(
       tokenId: 'P2P-${req.txnId}',
       merchantId: req.recipientId,
@@ -174,11 +187,14 @@ class P2pViewModel extends ChangeNotifier {
       _statusMessage = 'REJECTED: ${verifyResult.reason}';
       _state = P2pState.failed;
       notifyListeners();
-      await _acoustic.emitAcousticAck(nonce: req.nonce, isSuccess: false, txnId: req.txnId);
+      await _acoustic.emitAcousticAck(
+        nonce: req.nonce,
+        isSuccess: false,
+        txnId: req.txnId,
+      );
       return;
     }
 
-    // 3. Credit Receiver Wallet
     final currentBalance = _db.getDecryptedBalance();
     _db.updateBalance(currentBalance + req.amountInRupees);
 
@@ -199,29 +215,37 @@ class P2pViewModel extends ChangeNotifier {
     _db.recordStudentCredit(creditTxn);
     _committedTransaction = creditTxn;
 
-    // 4. Emit Acoustic ACK back to sender
-    await _acoustic.emitAcousticAck(nonce: req.nonce, isSuccess: true, txnId: req.txnId);
+    await _acoustic.emitAcousticAck(
+      nonce: req.nonce,
+      isSuccess: true,
+      txnId: req.txnId,
+    );
 
     _state = P2pState.committedSuccess;
-    _statusMessage = 'Sound wave transfer received! ₹${req.amountInRupees.toStringAsFixed(2)} credited from ${req.senderId}';
+    _statusMessage =
+        'Sound-wave transfer received. ₹${req.amountInRupees.toStringAsFixed(2)} '
+        'credited from ${req.senderId}.';
     notifyListeners();
   }
 
-  /// Sender Mode: Handles incoming ACK or NAK from receiver
+  /// Sender Mode: Handles incoming acoustic ACK or NAK frames.
   void _handleIncomingSenderAck(P2pMessage ackMsg) {
-    if (ackMsg.type != 'ACK' && ackMsg.type != 'NAK') {
-      // Sender only processes ACK or NAK responses, ignore REQ broadcast echo
-      return;
-    }
+    if (ackMsg.type != 'ACK' && ackMsg.type != 'NAK') return;
     if (_committedTransaction == null) return;
     final pendingNonce = _committedTransaction!.nonce;
 
     if (ackMsg.nonce != pendingNonce) {
-      debugPrint('[P2pViewModel] Nonce mismatch on ACK: expected $pendingNonce, got ${ackMsg.nonce}');
+      debugPrint(
+        '[P2pViewModel] Nonce mismatch on ACK: expected $pendingNonce, '
+        'got ${ackMsg.nonce}',
+      );
       return;
     }
     if (ackMsg.txnId != _committedTransaction!.txnId) {
-      debugPrint('[P2pViewModel] Transaction mismatch on ACK: expected ${_committedTransaction!.txnId}, got ${ackMsg.txnId}');
+      debugPrint(
+        '[P2pViewModel] Transaction mismatch on ACK: expected '
+        '${_committedTransaction!.txnId}, got ${ackMsg.txnId}',
+      );
       return;
     }
     if (ackMsg.amountPaise != 0 ||
@@ -229,7 +253,9 @@ class P2pViewModel extends ChangeNotifier {
         ackMsg.recipientId != 'SENDER' ||
         (DateTime.now().millisecondsSinceEpoch - ackMsg.timestamp).abs() >
             5 * 60 * 1000) {
-      debugPrint('[P2pViewModel] ACK envelope validation failed for ${ackMsg.txnId}');
+      debugPrint(
+        '[P2pViewModel] ACK envelope validation failed for ${ackMsg.txnId}',
+      );
       return;
     }
 
@@ -238,22 +264,24 @@ class P2pViewModel extends ChangeNotifier {
     _acoustic.stopListening();
 
     if (ackMsg.type == 'ACK' && ackMsg.status == 'OK') {
-      // TWO-PHASE COMMIT RULE: Only now deduct from sender's wallet
       final currentBalance = _db.getDecryptedBalance();
       _db.updateBalance(currentBalance - _committedTransaction!.amount);
-
       _db.recordStudentDebit(_committedTransaction!);
       _state = P2pState.committedSuccess;
-      _statusMessage = 'Verified Acoustic ACK received! ₹${_amount.toStringAsFixed(2)} successfully sent to $_peerName.';
+      _statusMessage =
+          'Acoustic ACK received. ₹${_amount.toStringAsFixed(2)} '
+          'recorded as sent to $_peerName.';
       notifyListeners();
     } else {
       _state = P2pState.failed;
-      _statusMessage = 'Peer rejected transfer request (${ackMsg.status}). Wallet balance untouched.';
+      _statusMessage =
+          'Peer returned a negative ACK (${ackMsg.status}). '
+          'Wallet balance untouched.';
       notifyListeners();
     }
   }
 
-  /// Receiver Mode: Activate mic listening
+  /// Receiver Mode: Activates the microphone listener.
   Future<void> startReceiverListeningMode() async {
     _activeRole = P2pRole.receiver;
     _state = P2pState.idle;
@@ -263,7 +291,9 @@ class P2pViewModel extends ChangeNotifier {
     final permissionGranted = await _acoustic.checkAndRequestPermission();
     if (!permissionGranted) {
       _state = P2pState.failed;
-      _statusMessage = 'Microphone permission denied. Enable RECORD_AUDIO in device settings to receive sound wave transfers.';
+      _statusMessage =
+          'Microphone permission denied. Enable RECORD_AUDIO in device '
+          'settings to receive sound-wave transfers.';
       notifyListeners();
       return;
     }
@@ -271,20 +301,25 @@ class P2pViewModel extends ChangeNotifier {
     final started = await _acoustic.startListening();
     if (!started) {
       _state = P2pState.failed;
-      _statusMessage = 'Receiver microphone could not start. Check microphone permission and close other apps using the mic.';
+      _statusMessage =
+          'Receiver microphone could not start. Check microphone permission '
+          'and close other apps using the mic.';
       notifyListeners();
       return;
     }
     _state = P2pState.listening;
-    _statusMessage = 'Microphone is recording. Keep this screen open to receive a sound-wave request.';
+    _statusMessage =
+        'Microphone is recording. Keep this screen open to receive a '
+        'sound-wave request.';
     notifyListeners();
   }
 
-  /// Switch the receiver to a short PING-only protocol that never touches wallet data.
+  /// Starts the wallet-free audible PING diagnostic listener.
   Future<void> startAcousticDiagnosticReceiver() async {
     _activeRole = P2pRole.receiver;
     _state = P2pState.idle;
-    _statusMessage = 'Diagnostic: requesting microphone and starting PING listener...';
+    _statusMessage =
+        'Diagnostic: requesting microphone and starting PING listener...';
     notifyListeners();
 
     await _acoustic.stopListening();
@@ -307,14 +342,16 @@ class P2pViewModel extends ChangeNotifier {
 
     _carrierMode = AudioCarrierMode.audibleFsk;
     _state = P2pState.listening;
-    _statusMessage = 'Diagnostic: listening for PING; wallets are untouched.';
+    _statusMessage =
+        'Diagnostic: listening for PING; wallets are untouched.';
     notifyListeners();
   }
 
-  /// Send the fixed PING diagnostic frame; it is not a payment request.
+  /// Sends the fixed PING diagnostic; it is not a payment request.
   Future<void> sendAcousticDiagnosticPing() async {
     _activeRole = P2pRole.sender;
-    _statusMessage = 'Diagnostic: starting PING playback; wallets are untouched.';
+    _statusMessage =
+        'Diagnostic: starting PING playback; wallets are untouched.';
     notifyListeners();
     try {
       await _acoustic.emitDiagnosticPing();
@@ -324,7 +361,6 @@ class P2pViewModel extends ChangeNotifier {
     }
   }
 
-  /// Receiver Mode: Stop mic listening
   Future<void> stopReceiverListeningMode() async {
     await _acoustic.stopListening();
     if (_state == P2pState.listening) {
@@ -334,12 +370,21 @@ class P2pViewModel extends ChangeNotifier {
     }
   }
 
-  /// Sender Mode: Initiate two-phase commit P2P transfer request
+  /// Starts the primary acoustic P2P payment flow. BLE is intentionally not
+  /// invoked automatically when acoustic delivery or its ACK is uncertain.
   Future<bool> sendP2pTransfer() async {
     _activeRole = P2pRole.sender;
     final currentBalance = _db.getDecryptedBalance();
+    if (_amount <= 0) {
+      _statusMessage = 'Enter a valid payment amount.';
+      _state = P2pState.failed;
+      notifyListeners();
+      return false;
+    }
     if (currentBalance < _amount) {
-      _statusMessage = 'Insufficient balance in Campus Wallet (Available: ₹${currentBalance.toStringAsFixed(2)})';
+      _statusMessage =
+          'Insufficient balance in Campus Wallet (Available: '
+          '₹${currentBalance.toStringAsFixed(2)})';
       _state = P2pState.failed;
       notifyListeners();
       return false;
@@ -348,7 +393,8 @@ class P2pViewModel extends ChangeNotifier {
     final permissionGranted = await _acoustic.checkAndRequestPermission();
     if (!permissionGranted) {
       _state = P2pState.failed;
-      _statusMessage = 'Microphone permission required for sound-wave ACK verification.';
+      _statusMessage =
+          'Microphone permission required for sound-wave ACK reception.';
       notifyListeners();
       return false;
     }
@@ -357,8 +403,6 @@ class P2pViewModel extends ChangeNotifier {
     final nonce = _ecdsa.generateNonce();
     final txnId = 'P2P-${const Uuid().v4().substring(0, 6).toUpperCase()}';
     final now = DateTime.now().millisecondsSinceEpoch;
-
-    // Sign payload
     final signature = _ecdsa.signPayload(
       tokenId: 'P2P-$txnId',
       merchantId: _peerName,
@@ -381,7 +425,123 @@ class P2pViewModel extends ChangeNotifier {
       isDebit: true,
     );
 
-    return _executeTransmissionWithAckWait(reqNonce: nonce, reqTxnId: txnId, signature: signature, timestamp: now);
+    return _executeTransmissionWithAckWait(
+      reqNonce: nonce,
+      reqTxnId: txnId,
+      signature: signature,
+      timestamp: now,
+    );
+  }
+
+  /// Explicit BLE sender operation retained from the feature branch. It is
+  /// separate from the acoustic flow and is not called on acoustic timeout.
+  Future<bool> sendBleP2pTransfer() async {
+    _activeRole = P2pRole.sender;
+    try {
+      if (_amount <= 0) {
+        _state = P2pState.failed;
+        _statusMessage = 'Enter a valid payment amount.';
+        notifyListeners();
+        return false;
+      }
+
+      final OfflineToken? token = _tokenRepo.getAvailableToken();
+      if (token == null) {
+        _state = P2pState.failed;
+        _statusMessage = 'No valid offline payment token available.';
+        notifyListeners();
+        return false;
+      }
+      if (token.isExpired) {
+        _state = P2pState.failed;
+        _statusMessage = 'Your offline payment token has expired.';
+        notifyListeners();
+        return false;
+      }
+      if (_amount > token.maxAmount) {
+        _state = P2pState.failed;
+        _statusMessage =
+            'Amount exceeds the offline token limit of '
+            '₹${token.maxAmount.toStringAsFixed(2)}.';
+        notifyListeners();
+        return false;
+      }
+
+      final nonce = _ecdsa.generateNonce();
+      final now = DateTime.now().millisecondsSinceEpoch;
+      const merchantId = 'STU-ROHAN-4211';
+      final paymentSignature = _ecdsa.signPayload(
+        tokenId: token.tokenId,
+        merchantId: merchantId,
+        amount: _amount,
+        timestamp: now,
+        nonce: nonce,
+      );
+      final paymentData = <String, dynamic>{
+        'token_id': token.tokenId,
+        'wallet_id': token.walletId,
+        'max_amount': token.maxAmount,
+        'expiry_timestamp': token.expiryTimestamp,
+        'server_signature': token.serverSignature,
+        'amount': _amount,
+        'merchant_id': merchantId,
+        'merchant_name': _peerName,
+        'timestamp': now,
+        'nonce': nonce,
+        'payment_signature': paymentSignature,
+      };
+
+      _state = P2pState.transmittingPayload;
+      _statusMessage = 'Sending offline payment token through BLE...';
+      notifyListeners();
+
+      final bleSuccess = await _bleTransport.sendPayment(
+        paymentData: paymentData,
+      );
+      if (!bleSuccess) {
+        _state = P2pState.failed;
+        _statusMessage = 'BLE payment failed. No token was deducted.';
+        notifyListeners();
+        return false;
+      }
+
+      _state = P2pState.waitingPeerAck;
+      _statusMessage = 'BLE receiver returned an ACK.';
+      notifyListeners();
+
+      _tokenRepo.markTokenUsed(token.tokenId);
+      final txnId =
+          'P2P-${const Uuid().v4().substring(0, 6).toUpperCase()}';
+      final txn = TransactionRecord(
+        txnId: txnId,
+        tokenId: token.tokenId,
+        merchantId: merchantId,
+        merchantName: _peerName,
+        amount: _amount,
+        timestamp: now,
+        channel: PaymentChannel.bleAdvert,
+        status: TxnStatus.verified,
+        syncStatus: SyncStatus.offlineUnsynced,
+        nonce: nonce,
+        isDebit: true,
+      );
+
+      _db.recordStudentDebit(txn);
+      _committedTransaction = txn;
+      _state = P2pState.committedSuccess;
+      _statusMessage =
+          'BLE ACK received. ₹${_amount.toStringAsFixed(2)} '
+          'recorded as sent using the offline token.';
+      notifyListeners();
+      return true;
+    } catch (e, stackTrace) {
+      debugPrint('[P2P] BLE payment failed: $e');
+      debugPrint('[P2P] Stack trace: $stackTrace');
+      _state = P2pState.failed;
+      _statusMessage = 'BLE payment failed. The transfer was not recorded.';
+      notifyListeners();
+      return false;
+    }
   }
 
   Future<bool> _executeTransmissionWithAckWait({
@@ -401,33 +561,36 @@ class P2pViewModel extends ChangeNotifier {
       signature: signature,
     );
 
-    // Phase 1: Transmitting Signed Sound Wave Payload
     _state = P2pState.transmittingPayload;
-    _statusMessage = 'Emitting FSK sound-wave burst over speaker (${_carrierMode == AudioCarrierMode.audibleFsk ? "1.2–2.4kHz Audible FSK" : "18–22kHz Ultrasonic"})...';
+    _statusMessage =
+        'Emitting FSK sound-wave burst over speaker '
+        '(${_carrierMode == AudioCarrierMode.audibleFsk ? '1.2–2.4kHz Audible FSK' : '18–22kHz Ultrasonic'})...';
     notifyListeners();
 
     try {
-      // Listen before playback so an early peer response cannot arrive before
-      // this phone's microphone has started.
       final listening = await _acoustic.startListening();
-      if (!listening) throw StateError('Sender microphone could not start for ACK reception.');
+      if (!listening) {
+        throw StateError('Sender microphone could not start for ACK reception.');
+      }
 
-      // emitP2pMessage now completes only when native AudioTrack playback ends.
       await _acoustic.emitP2pMessage(reqMsg);
-
-      // ACKs are accepted during playback too; preserve a state that may have
-      // already changed because the peer answered quickly.
       if (_state == P2pState.committedSuccess || _state == P2pState.failed) {
         return _state == P2pState.committedSuccess;
       }
+
       _state = P2pState.waitingPeerAck;
-      _statusMessage = 'Request transmission completed. Waiting for the peer microphone to verify it and return an ACK...';
+      _statusMessage =
+          'Request transmission completed. Waiting for the peer to return an ACK...';
       notifyListeners();
 
       _ackTimeoutTimer?.cancel();
-      // The ACK is also an FSK frame, so its playback takes longer than a tone.
       _ackTimeoutTimer = Timer(const Duration(seconds: 60), () {
-        _handleAckTimeout(reqNonce: reqNonce, reqTxnId: reqTxnId, signature: signature, timestamp: timestamp);
+        _handleAckTimeout(
+          reqNonce: reqNonce,
+          reqTxnId: reqTxnId,
+          signature: signature,
+          timestamp: timestamp,
+        );
       });
       return true;
     } catch (error) {
@@ -439,26 +602,28 @@ class P2pViewModel extends ChangeNotifier {
     }
   }
 
-  void _handleAckTimeout({
+  Future<void> _handleAckTimeout({
     required String reqNonce,
     required String reqTxnId,
     required String signature,
     required int timestamp,
   }) async {
     await _acoustic.stopListening();
-    // The ACK may have landed just as the timeout fired. Never overwrite a
-    // completed/rejected result with a retry state after that race.
     if (_state != P2pState.waitingPeerAck) return;
 
     if (_retryCount < _maxRetries) {
       _retryCount++;
       _state = P2pState.retrying;
-      _statusMessage = 'Acoustic ACK timeout. Retrying audio transmission (Attempt $_retryCount of $_maxRetries)...';
+      _statusMessage =
+          'Acoustic ACK timeout. Retrying sound-wave transmission '
+          '(Attempt $_retryCount of $_maxRetries)...';
       notifyListeners();
 
       await Future.delayed(const Duration(milliseconds: 600));
-      if (_state == P2pState.committedSuccess || _state == P2pState.failed) return;
-      _executeTransmissionWithAckWait(
+      if (_state == P2pState.committedSuccess || _state == P2pState.failed) {
+        return;
+      }
+      await _executeTransmissionWithAckWait(
         reqNonce: reqNonce,
         reqTxnId: reqTxnId,
         signature: signature,
@@ -466,7 +631,9 @@ class P2pViewModel extends ChangeNotifier {
       );
     } else {
       _state = P2pState.failed;
-      _statusMessage = 'Transfer Failed: No response from peer microphone after $_maxRetries acoustic retries. Wallet funds remain untouched.';
+      _statusMessage =
+          'No acoustic ACK received after $_maxRetries retries. '
+          'The outcome may be unresolved; BLE was not attempted.';
       notifyListeners();
     }
   }
@@ -488,6 +655,7 @@ class P2pViewModel extends ChangeNotifier {
     _p2pSubscription?.cancel();
     _audioStatusSubscription?.cancel();
     _acoustic.stopListening();
+    _bleTransport.dispose();
     super.dispose();
   }
 }

@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/audio/acoustic_carrier.dart';
+import '../../core/ble/ble_payment_carrier.dart';
 import '../../core/constants/app_colors.dart';
+import '../../data/models/transaction_record.dart';
 import '../viewmodels/p2p_viewmodel.dart';
 import '../viewmodels/wallet_viewmodel.dart';
 import '../widgets/fintech_card.dart';
@@ -27,15 +31,22 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
   ];
 
   late String _selectedPeer;
+  StreamSubscription<Map<String, dynamic>>? _paymentSubscription;
+  Map<String, dynamic>? _receivedPayment;
 
   @override
   void initState() {
     super.initState();
     _selectedPeer = _peers[0];
+    _paymentSubscription = BlePaymentCarrier().receivedPayments.listen((payment) {
+      if (!mounted) return;
+      setState(() => _receivedPayment = payment);
+    });
   }
 
   @override
   void dispose() {
+    _paymentSubscription?.cancel();
     _amountController.dispose();
     super.dispose();
   }
@@ -75,7 +86,9 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
             const SizedBox(height: 16),
 
             // Main Body view based on active role & state
-            if (p2pVM.activeRole == P2pRole.receiver) ...[
+            if (_receivedPayment != null) ...[
+              _buildBleReceiveState(walletVM),
+            ] else if (p2pVM.activeRole == P2pRole.receiver) ...[
               _buildReceiverFlow(p2pVM, walletVM),
             ] else ...[
               if (isProcessing) ...[
@@ -92,6 +105,83 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildBleReceiveState(WalletViewModel walletVM) {
+    final payment = _receivedPayment!;
+    final amount = (payment['amount'] as num?)?.toDouble() ?? 0.0;
+    final senderName = payment['sender_name']?.toString() ?? 'CampusPay user';
+    final transactionId =
+        payment['transaction_id']?.toString() ?? 'BLE-P2P';
+
+    return Column(
+      children: [
+        const SizedBox(height: 36),
+        const Icon(
+          Icons.check_circle,
+          size: 90,
+          color: AppColors.successGreen,
+        ),
+        const SizedBox(height: 18),
+        Text(
+          'PAYMENT RECEIVED',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: AppColors.successGreen,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          '₹${amount.toStringAsFixed(2)}',
+          style: GoogleFonts.bodoniModa(
+            fontSize: 46,
+            fontWeight: FontWeight.w800,
+            color: AppColors.white,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'From $senderName',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.plusJakartaSans(
+            color: AppColors.lightMutedText,
+          ),
+        ),
+        const SizedBox(height: 28),
+        FintechCard(
+          leftBorderColor: AppColors.lightPurple,
+          child: Column(
+            children: [
+              _row('TRANSACTION ID', transactionId),
+              const SizedBox(height: 12),
+              _row('STATUS', 'BLE TRANSPORT ACK (DEMO)'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          'Local prototype demo · No real bank funds moved',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 11,
+            color: AppColors.mutedText,
+          ),
+        ),
+        const SizedBox(height: 28),
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton(
+            onPressed: () {
+              setState(() => _receivedPayment = null);
+              walletVM.refresh();
+            },
+            child: const Text('DONE'),
+          ),
+        ),
+      ],
     );
   }
 
@@ -384,7 +474,7 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
                   const Icon(Icons.security_rounded, size: 14, color: AppColors.lightPurple),
                   const SizedBox(width: 8),
                   Text(
-                    'TWO-PHASE AIRGAP COMMIT',
+                    'TWO-PHASE DEMO TRANSFER',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
@@ -396,7 +486,8 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
               ),
               const SizedBox(height: 6),
               Text(
-                'Funds deducted ONLY after peer receives the audio payload and responds with a verified Acoustic ACK.',
+                'The sender records this demo transfer after a matching peer ACK. '
+                    'An ACK is transport confirmation, not cryptographic authentication.',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 11,
                   color: AppColors.lightMutedText,
@@ -603,6 +694,25 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
             ),
           ),
         ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: OutlinedButton.icon(
+            icon: const Icon(Icons.bluetooth),
+            label: const Text('SEND VIA BLE (MANUAL)  ·  NO AUTO-FALLBACK'),
+            onPressed: p2pVM.committedTransaction == null
+                ? () {
+                    final amt =
+                        double.tryParse(_amountController.text) ?? 0.0;
+                    if (amt <= 0) return;
+                    p2pVM.setPeerName(_selectedPeer);
+                    p2pVM.setAmount(amt);
+                    p2pVM.sendBleP2pTransfer();
+                  }
+                : null,
+          ),
+        ),
         const SizedBox(height: 10),
         SizedBox(
           width: double.infinity,
@@ -626,17 +736,27 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
   }
 
   Widget _buildProcessingState(P2pViewModel p2pVM) {
+    final bool isBleSending =
+        p2pVM.statusMessage?.startsWith('Sending offline payment token') ??
+            false;
+    final String processingLabel;
+    if (isBleSending) {
+      processingLabel = 'SENDING PAYMENT OVER BLE...';
+    } else if (p2pVM.state == P2pState.transmittingPayload) {
+      processingLabel = 'EMITTING SOUND WAVE BURST...';
+    } else if (p2pVM.state == P2pState.retrying) {
+      processingLabel = 'RETRYING (${p2pVM.retryCount}/${p2pVM.maxRetries})...';
+    } else {
+      processingLabel = 'AWAITING ACOUSTIC ACK...';
+    }
+
     return Column(
       children: [
         const SizedBox(height: 40),
         const TransmissionWaveWidget(size: 220),
         const SizedBox(height: 32),
         Text(
-          p2pVM.state == P2pState.transmittingPayload
-              ? 'EMITTING SOUND WAVE BURST...'
-              : p2pVM.state == P2pState.retrying
-                  ? 'RETRYING (${p2pVM.retryCount}/${p2pVM.maxRetries})...'
-                  : 'AWAITING ACOUSTIC ACK...',
+          processingLabel,
           textAlign: TextAlign.center,
           style: GoogleFonts.plusJakartaSans(
             fontSize: 16,
@@ -688,7 +808,7 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
         ),
         const SizedBox(height: 16),
         Text(
-          'P2P AIRGAP COMMIT COMPLETE',
+          'P2P TRANSFER COMPLETE (DEMO)',
           style: GoogleFonts.plusJakartaSans(
             fontSize: 13,
             fontWeight: FontWeight.w800,
@@ -721,7 +841,7 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
               const SizedBox(height: 8),
               _row('NONCE PAIR', txn.nonce.substring(0, 16)),
               const SizedBox(height: 8),
-              _row('STATUS', 'COMMITTED VIA ACOUSTIC ACK'),
+              _row('STATUS', 'PEER ACK RECEIVED (DEMO)'),
             ],
           ),
         ),
@@ -732,7 +852,9 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
           child: ElevatedButton(
             onPressed: () {
               walletVM.refresh();
-              walletVM.awardCoins(15, 'P2P Transfer Bonus');
+              if (txn.channel == PaymentChannel.p2pAcoustic) {
+                walletVM.awardCoins(15, 'P2P Transfer Bonus');
+              }
               p2pVM.reset();
             },
             child: const Text('FINISH'),

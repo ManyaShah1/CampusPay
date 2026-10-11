@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:razorpay_flutter/razorpay_flutter.dart';
-import 'env_service.dart';
 
 /// Service managing Razorpay checkout lifecycle for Campus Wallet top-ups.
 class RazorpayService {
@@ -17,20 +16,20 @@ class RazorpayService {
 
   double _pendingAmount = 0.0;
 
-  static String _safeGetEnv(String key, String fallback) {
+  static String _safeGetEnv(String key) {
     try {
       if (dotenv.isInitialized) {
-        return dotenv.env[key] ?? fallback;
+        return dotenv.env[key] ?? '';
       }
     } catch (_) {}
-    return fallback;
+    return '';
   }
 
   RazorpayService({
     String? keyId,
     String? keySecret,
-  })  : keyId = keyId ?? _safeGetEnv('RAZORPAY_KEY_ID', 'rzp_test_TlXNu2KYBa3OOl'),
-        keySecret = keySecret ?? _safeGetEnv('RAZORPAY_KEY_SECRET', 'zL3Jn5drnq9xyl2q3PER39Ll') {
+  })  : keyId = keyId ?? _safeGetEnv('RAZORPAY_KEY_ID'),
+        keySecret = keySecret ?? _safeGetEnv('RAZORPAY_KEY_SECRET') {
     _initRazorpay();
   }
 
@@ -71,6 +70,17 @@ class RazorpayService {
 
   /// Automatically creates a real server-side order with Razorpay Orders API
   Future<String?> createOrder(double amount) async {
+    final missingCredentials = <String>[
+      if (keyId.trim().isEmpty) 'RAZORPAY_KEY_ID',
+      if (keySecret.trim().isEmpty) 'RAZORPAY_KEY_SECRET',
+    ];
+    if (missingCredentials.isNotEmpty) {
+      debugPrint(
+        '[RazorpayService] Order creation unavailable. Configure ${missingCredentials.join(' and ')}.',
+      );
+      return null;
+    }
+
     try {
       final amountInPaise = (amount * 100).round();
       final authHeader =
@@ -114,6 +124,17 @@ class RazorpayService {
     String studentContact = '9876543210',
     String? orderId,
   }) async {
+    if (keyId.trim().isEmpty) {
+      throw StateError(
+        'Razorpay is not configured: set RAZORPAY_KEY_ID before checkout.',
+      );
+    }
+    if ((orderId == null || orderId.isEmpty) && keySecret.trim().isEmpty) {
+      throw StateError(
+        'Razorpay order creation is not configured: set RAZORPAY_KEY_SECRET.',
+      );
+    }
+
     _pendingAmount = amount;
     final int amountInPaise = (amount * 100).round();
 

@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
+
+import 'core/ble/ble_payment_carrier.dart';
 import 'core/constants/app_theme.dart';
+import 'core/services/env_service.dart';
+import 'core/services/onboarding_service.dart';
+import 'ui/screens/main_navigation_screen.dart';
+import 'ui/screens/onboarding_screen.dart';
 import 'ui/auth/login_screen.dart';
 import 'ui/viewmodels/p2p_viewmodel.dart';
 import 'ui/viewmodels/payment_viewmodel.dart';
@@ -8,12 +15,7 @@ import 'ui/viewmodels/soundbox_viewmodel.dart';
 import 'ui/viewmodels/wallet_viewmodel.dart';
 import 'ui/viewmodels/ussd_viewmodel.dart';
 
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'core/services/env_service.dart';
-import 'core/services/onboarding_service.dart';
-import 'ui/screens/onboarding_screen.dart';
-
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await dotenv.load(fileName: ".env");
@@ -22,7 +24,11 @@ void main() async {
   }
   await EnvService.load();
   final isOnboardingCompleted = await OnboardingService.isOnboardingCompleted();
+  final bleCarrier = BlePaymentCarrier();
   runApp(CampusPayApp(initialOnboardingCompleted: isOnboardingCompleted));
+  debugPrint('[MAIN] Starting BLE initialization');
+  await bleCarrier.initialize();
+  debugPrint('[MAIN] BLE initialization finished');
 }
 
 class CampusPayApp extends StatelessWidget {

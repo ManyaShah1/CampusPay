@@ -35,16 +35,21 @@ class PaymentRepository {
       nonce: nonce,
     );
 
+    
     final payload = PaymentPayload(
       tokenId: token.tokenId,
-      merchantId: merchantId,
-      amount: amount,
-      timestamp: now,
-      nonce: nonce,
+      walletId: token.walletId,
+      serverSignature: token.serverSignature,
       payerSignature: signature,
-      payerName: 'Aarav Sharma (TE-IT)',
-      tokenExpiry: token.expiryTimestamp,
+      nonce: nonce,
+      merchantId: merchantId,
+      merchantName: merchantName,
+      amount: amount,
+      maxAmount: token.maxAmount,
+      expiryTimestamp: token.expiryTimestamp,
+      timestamp: now,
     );
+
 
     // 3. Deduct from local wallet
     final currentBalance = _db.getDecryptedBalance();
