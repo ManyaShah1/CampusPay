@@ -4,116 +4,122 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/services/onboarding_service.dart';
 
-class TourStep {
-  final String stepTag;
-  final IconData icon;
-  final Color iconColor;
-  final Color iconBg;
+class TourElementTarget {
+  final GlobalKey key;
+  final String badge;
   final String title;
   final String description;
-  final List<String> bulletPoints;
-  final String buttonText;
+  final IconData icon;
+  final Color accentColor;
+  final String actionTip;
 
-  const TourStep({
-    required this.stepTag,
-    required this.icon,
-    required this.iconColor,
-    required this.iconBg,
+  const TourElementTarget({
+    required this.key,
+    required this.badge,
     required this.title,
     required this.description,
-    required this.bulletPoints,
-    required this.buttonText,
+    required this.icon,
+    this.accentColor = AppColors.electricYellow,
+    required this.actionTip,
   });
 }
 
 class HomeTourOverlay extends StatefulWidget {
+  final List<TourElementTarget> targets;
   final VoidCallback onFinish;
 
-  const HomeTourOverlay({super.key, required this.onFinish});
+  const HomeTourOverlay({
+    super.key,
+    required this.targets,
+    required this.onFinish,
+  });
 
   @override
   State<HomeTourOverlay> createState() => _HomeTourOverlayState();
 }
 
-class _HomeTourOverlayState extends State<HomeTourOverlay> {
-  int _currentStep = 0;
+class _HomeTourOverlayState extends State<HomeTourOverlay>
+    with SingleTickerProviderStateMixin {
+  int _currentIndex = 0;
+  Rect? _targetRect;
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulseAnimation;
 
-  final List<TourStep> _steps = const [
-    TourStep(
-      stepTag: 'STEP 1 OF 4 • OFFLINE WALLET',
-      icon: Icons.account_balance_wallet_rounded,
-      iconColor: AppColors.electricYellow,
-      iconBg: Color(0xFF4C1D95),
-      title: 'Encrypted Campus Wallet',
-      description:
-          'Your offline balance is secured with on-device AES-256 encryption. Tap "Add Money" anytime to recharge using Razorpay with UPI or cards.',
-      bulletPoints: [
-        'Live dynamic balance with zero mock data',
-        '10 pre-signed ECDSA cryptographic tokens',
-        'Instant Razorpay checkout top-up gateway',
-      ],
-      buttonText: 'Next: Fast Actions ➔',
-    ),
-    TourStep(
-      stepTag: 'STEP 2 OF 4 • FAST ACTIONS',
-      icon: Icons.qr_code_scanner_rounded,
-      iconColor: Color(0xFF1C1917),
-      iconBg: AppColors.electricYellow,
-      title: 'Scan & Pay Anywhere',
-      description:
-          'Pay in seconds at DBIT canteen, stationery, or xerox shops. Scan merchant QR codes using your camera or send peer-to-peer funds offline.',
-      bulletPoints: [
-        'Camera QR scanner with UPI ID & number parsing',
-        'P2P offline transfer directly to classmates',
-        'Offline USSD *99# dialing for zero-net fallback',
-      ],
-      buttonText: 'Next: Offline Mode ➔',
-    ),
-    TourStep(
-      stepTag: 'STEP 3 OF 4 • ZERO INTERNET',
-      icon: Icons.sensors_rounded,
-      iconColor: Colors.white,
-      iconBg: Color(0xFF7C3AED),
-      title: 'Works Without Internet',
-      description:
-          'Never worry about weak mobile coverage in basement canteens. CampusPay transmits secure tokens over ultrasonic sound waves and Bluetooth.',
-      bulletPoints: [
-        'Zero-drop acoustic & BLE soundwave payments',
-        'Hardware SoundBox verification ready',
-        'Local ledger syncs automatically when online',
-      ],
-      buttonText: 'Next: Rewards ➔',
-    ),
-    TourStep(
-      stepTag: 'STEP 4 OF 4 • REWARDS VAULT',
-      icon: Icons.stars_rounded,
-      iconColor: Color(0xFFD97706),
-      iconBg: Color(0xFFFFF7C2),
-      title: 'Earn Rewards Every Day',
-      description:
-          'Collect CampusCoins with every transaction across college. Redeem them at the campus vault for free coffee, snacks, and event passes.',
-      bulletPoints: [
-        'Automatic coin accrual on every campus spend',
-        'Daily login streak multipliers',
-        'Instant voucher redemption at campus stalls',
-      ],
-      buttonText: "Explore CampusPay 🚀",
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
 
-  void _nextStep() {
+    _pulseAnimation = CurvedAnimation(
+      parent: _pulseController,
+      curve: Curves.easeInOut,
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusCurrentTarget();
+    });
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  void _focusCurrentTarget() {
+    if (!mounted || widget.targets.isEmpty) return;
+
+    final target = widget.targets[_currentIndex];
+    final targetContext = target.key.currentContext;
+
+    if (targetContext != null) {
+      // Smoothly scroll to the target widget
+      Scrollable.ensureVisible(
+        targetContext,
+        duration: const Duration(milliseconds: 320),
+        alignment: 0.35,
+        curve: Curves.easeInOutCubic,
+      );
+
+      // Measure coordinates after scroll adjusts
+      Future.delayed(const Duration(milliseconds: 350), () {
+        if (!mounted) return;
+        final renderBox =
+            target.key.currentContext?.findRenderObject() as RenderBox?;
+        if (renderBox != null && renderBox.hasSize) {
+          final offset = renderBox.localToGlobal(Offset.zero);
+          setState(() {
+            _targetRect = offset & renderBox.size;
+          });
+        }
+      });
+    }
+  }
+
+  void _nextTarget() {
     HapticFeedback.lightImpact();
-    if (_currentStep < _steps.length - 1) {
-      setState(() => _currentStep++);
+    if (_currentIndex < widget.targets.length - 1) {
+      setState(() {
+        _currentIndex++;
+        _targetRect = null;
+      });
+      _focusCurrentTarget();
     } else {
       _finishTour();
     }
   }
 
-  void _prevStep() {
+  void _prevTarget() {
     HapticFeedback.lightImpact();
-    if (_currentStep > 0) {
-      setState(() => _currentStep--);
+    if (_currentIndex > 0) {
+      setState(() {
+        _currentIndex--;
+        _targetRect = null;
+      });
+      _focusCurrentTarget();
     }
   }
 
@@ -125,239 +131,363 @@ class _HomeTourOverlayState extends State<HomeTourOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    final step = _steps[_currentStep];
+    if (widget.targets.isEmpty) return const SizedBox.shrink();
+
+    final target = widget.targets[_currentIndex];
+    final screenSize = MediaQuery.of(context).size;
+    final isLast = _currentIndex == widget.targets.length - 1;
+
+    // Determine tooltip position relative to target
+    final showBelow = _targetRect == null ||
+        (_targetRect!.bottom + 260 < screenSize.height);
+
+    double? tooltipTop;
+    double? tooltipBottom;
+
+    if (_targetRect != null) {
+      if (showBelow) {
+        tooltipTop = (_targetRect!.bottom + 14)
+            .clamp(16.0, screenSize.height - 280.0);
+      } else {
+        tooltipBottom = (screenSize.height - _targetRect!.top + 14)
+            .clamp(16.0, screenSize.height - 280.0);
+      }
+    }
 
     return Material(
-      color: Colors.black.withValues(alpha: 0.72),
-      child: SafeArea(
-        child: Stack(
-          children: [
-            // Centered Tour Guide Card
-            Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-                child: Container(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.25),
-                        blurRadius: 36,
-                        spreadRadius: 4,
-                        offset: const Offset(0, 12),
+      color: Colors.transparent,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Spotlight Canvas (Dark Scrim with Cutout Hole and Glowing Border)
+          AnimatedBuilder(
+            animation: _pulseAnimation,
+            builder: (context, _) {
+              return CustomPaint(
+                painter: _SpotlightPainter(
+                  targetRect: _targetRect,
+                  glowValue: _pulseAnimation.value,
+                  accentColor: target.accentColor,
+                ),
+              );
+            },
+          ),
+
+          // Dismiss / Background tap catcher (for skipping)
+          GestureDetector(
+            onTap: _nextTarget,
+            behavior: HitTestBehavior.translucent,
+            child: const SizedBox.expand(),
+          ),
+
+          // Interactive Tooltip Card
+          Positioned(
+            left: 16,
+            right: 16,
+            top: tooltipTop,
+            bottom: tooltipBottom,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              child: _buildTooltipCard(
+                key: ValueKey(_currentIndex),
+                target: target,
+                isLast: isLast,
+                showBelow: showBelow,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTooltipCard({
+    required Key key,
+    required TourElementTarget target,
+    required bool isLast,
+    required bool showBelow,
+  }) {
+    return Container(
+      key: key,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.28),
+            blurRadius: 30,
+            offset: const Offset(0, 10),
+          ),
+        ],
+        border: Border.all(
+          color: target.accentColor.withValues(alpha: 0.6),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top Header Row: Badge, Step Counter, Close Button
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: target.accentColor.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      target.badge,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF1C1917),
+                        letterSpacing: 0.4,
                       ),
-                    ],
+                    ),
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Header Row: Step Tag + Skip button
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF1DBFF),
-                              borderRadius: BorderRadius.circular(9999),
-                            ),
-                            child: Text(
-                              step.stepTag,
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
-                                color: const Color(0xFF6B21A8),
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: _finishTour,
-                            behavior: HitTestBehavior.opaque,
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF3F4F6),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.close_rounded,
-                                size: 16,
-                                color: Color(0xFF6B7280),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 18),
-
-                      // Step Icon
-                      Container(
-                        width: 54,
-                        height: 54,
-                        decoration: BoxDecoration(
-                          color: step.iconBg,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: step.iconBg.withValues(alpha: 0.35),
-                              blurRadius: 16,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Icon(step.icon, color: step.iconColor, size: 28),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Title
-                      Text(
-                        step.title,
-                        style: GoogleFonts.fraunces(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF1E1727),
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Description
-                      Text(
-                        step.description,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          color: const Color(0xFF4B5563),
-                          height: 1.45,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Bullet Points
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF9FAFB),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFE5E7EB)),
-                        ),
-                        child: Column(
-                          children: step.bulletPoints.map((point) {
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Padding(
-                                    padding: EdgeInsets.only(top: 2),
-                                    child: Icon(
-                                      Icons.check_circle_rounded,
-                                      color: Color(0xFF10B981),
-                                      size: 16,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      point,
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: const Color(0xFF1F2937),
-                                        height: 1.35,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Footer Navigation Row
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          // Dots Indicator
-                          Row(
-                            children: List.generate(_steps.length, (index) {
-                              final isActive = index == _currentStep;
-                              return AnimatedContainer(
-                                duration: const Duration(milliseconds: 250),
-                                margin: const EdgeInsets.symmetric(horizontal: 3),
-                                width: isActive ? 18 : 6,
-                                height: 6,
-                                decoration: BoxDecoration(
-                                  color: isActive
-                                      ? const Color(0xFF6B21A8)
-                                      : const Color(0xFFE5E7EB),
-                                  borderRadius: BorderRadius.circular(3),
-                                ),
-                              );
-                            }),
-                          ),
-
-                          // Action Buttons
-                          Row(
-                            children: [
-                              if (_currentStep > 0)
-                                TextButton(
-                                  onPressed: _prevStep,
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: const Color(0xFF6B21A8),
-                                  ),
-                                  child: Text(
-                                    'Back',
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                              ElevatedButton(
-                                onPressed: _nextStep,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.electricYellow,
-                                  foregroundColor: const Color(0xFF1C1917),
-                                  elevation: 0,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 12,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                ),
-                                child: Text(
-                                  step.buttonText,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w800,
-                                    color: const Color(0xFF1C1917),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
+                  const SizedBox(width: 8),
+                  Text(
+                    '${_currentIndex + 1} of ${widget.targets.length}',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF6B7280),
+                    ),
+                  ),
+                ],
+              ),
+              GestureDetector(
+                onTap: _finishTour,
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF3F4F6),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close_rounded,
+                    size: 16,
+                    color: Color(0xFF6B7280),
                   ),
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Title Row with Icon
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: target.accentColor.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(target.icon, size: 18, color: const Color(0xFF1C1917)),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  target.title,
+                  style: GoogleFonts.fraunces(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF1E1727),
+                    letterSpacing: -0.3,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Description
+          Text(
+            target.description,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12.5,
+              color: const Color(0xFF4B5563),
+              height: 1.4,
+              fontWeight: FontWeight.w500,
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 10),
+
+          // Action Tip Pill
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF9FAFB),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFE5E7EB)),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.tips_and_updates_rounded,
+                  size: 14,
+                  color: Color(0xFFD97706),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    target.actionTip,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF1F2937),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Bottom Controls: Step Dots + Prev / Next Button
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Progress dots
+              Row(
+                children: List.generate(widget.targets.length, (idx) {
+                  final isActive = idx == _currentIndex;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                    width: isActive ? 16 : 5,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? const Color(0xFF6B21A8)
+                          : const Color(0xFFE5E7EB),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  );
+                }),
+              ),
+
+              // Buttons
+              Row(
+                children: [
+                  if (_currentIndex > 0)
+                    TextButton(
+                      onPressed: _prevTarget,
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF6B21A8),
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(
+                        'Back',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(width: 6),
+                  ElevatedButton(
+                    onPressed: _nextTarget,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.electricYellow,
+                      foregroundColor: const Color(0xFF1C1917),
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          isLast ? 'Done 🚀' : 'Next ➔',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF1C1917),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
       ),
     );
+  }
+}
+
+class _SpotlightPainter extends CustomPainter {
+  final Rect? targetRect;
+  final double glowValue;
+  final Color accentColor;
+
+  _SpotlightPainter({
+    required this.targetRect,
+    required this.glowValue,
+    required this.accentColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const overlayColor = Color(0xBF000000); // 75% dark scrim
+    final backgroundPaint = Paint()..color = overlayColor;
+
+    if (targetRect == null) {
+      canvas.drawRect(Offset.zero & size, backgroundPaint);
+      return;
+    }
+
+    final inflated = targetRect!.inflate(6);
+    final rrect = RRect.fromRectAndRadius(inflated, const Radius.circular(16));
+
+    // Draw dark scrim with clear cutout
+    final screenPath = Path()..addRect(Offset.zero & size);
+    final cutoutPath = Path()..addRRect(rrect);
+    final combinedPath =
+        Path.combine(PathOperation.difference, screenPath, cutoutPath);
+    canvas.drawPath(combinedPath, backgroundPaint);
+
+    // Glowing Neon Stroke around the highlighted element
+    final strokePaint = Paint()
+      ..color = accentColor.withValues(alpha: 0.9)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5;
+    canvas.drawRRect(rrect, strokePaint);
+
+    // Pulsing Outer Aura Halo
+    final haloPaint = Paint()
+      ..color = accentColor.withValues(alpha: 0.25 * glowValue)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6.0;
+    canvas.drawRRect(rrect, haloPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _SpotlightPainter oldDelegate) {
+    return oldDelegate.targetRect != targetRect ||
+        oldDelegate.glowValue != glowValue ||
+        oldDelegate.accentColor != accentColor;
   }
 }

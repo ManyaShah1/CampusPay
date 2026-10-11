@@ -8,11 +8,17 @@ import 'ui/viewmodels/soundbox_viewmodel.dart';
 import 'ui/viewmodels/wallet_viewmodel.dart';
 import 'ui/viewmodels/ussd_viewmodel.dart';
 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'core/services/onboarding_service.dart';
 import 'ui/screens/onboarding_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint('[Main] Could not load .env file: $e');
+  }
   final isOnboardingCompleted = await OnboardingService.isOnboardingCompleted();
   runApp(CampusPayApp(initialOnboardingCompleted: isOnboardingCompleted));
 }
