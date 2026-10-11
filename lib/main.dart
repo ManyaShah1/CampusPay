@@ -8,6 +8,7 @@ import 'core/services/env_service.dart';
 import 'core/services/onboarding_service.dart';
 import 'ui/screens/main_navigation_screen.dart';
 import 'ui/screens/onboarding_screen.dart';
+import 'ui/auth/login_screen.dart';
 import 'ui/viewmodels/p2p_viewmodel.dart';
 import 'ui/viewmodels/payment_viewmodel.dart';
 import 'ui/viewmodels/soundbox_viewmodel.dart';
@@ -50,7 +51,7 @@ class CampusPayApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         home: initialOnboardingCompleted
-            ? const MainNavigationScreen()
+            ? const LoginScreen()
             : const OnboardingScreen(),
       ),
     );
