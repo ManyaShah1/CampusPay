@@ -9,6 +9,7 @@ import 'ui/viewmodels/wallet_viewmodel.dart';
 import 'ui/viewmodels/ussd_viewmodel.dart';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'core/services/env_service.dart';
 import 'core/services/onboarding_service.dart';
 import 'ui/screens/onboarding_screen.dart';
 
@@ -19,6 +20,7 @@ void main() async {
   } catch (e) {
     debugPrint('[Main] Could not load .env file: $e');
   }
+  await EnvService.load();
   final isOnboardingCompleted = await OnboardingService.isOnboardingCompleted();
   runApp(CampusPayApp(initialOnboardingCompleted: isOnboardingCompleted));
 }

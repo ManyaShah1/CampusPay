@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'env_service.dart';
 
 /// Service managing Razorpay checkout lifecycle for Campus Wallet top-ups.
 class RazorpayService {
