@@ -2,6 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/crypto/aes_vault.dart';
 import '../../core/crypto/ecdsa_service.dart';
+import '../../core/services/supabase_service.dart';
 import '../models/offline_token.dart';
 import '../models/transaction_record.dart';
 
@@ -25,8 +26,8 @@ class LocalLedgerDb {
   }
 
   void _initializeInitialState() {
-    // Default initial seed balance (₹250.00) encrypted with AES-256
-    _encryptedBalance = _vault.encrypt('250.00');
+    // Default initial wallet balance (₹0.00) encrypted with AES-256
+    _encryptedBalance = _vault.encrypt('0.00');
 
     // Generate batch of 10 pre-authorized ECDSA tokens (48hr validity)
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -178,14 +179,23 @@ class LocalLedgerDb {
 
   void recordStudentDebit(TransactionRecord txn) {
     _studentTransactions.insert(0, txn);
+    if (SupabaseService.isConfigured) {
+      SupabaseService.syncTransaction(txn);
+    }
   }
 
   void recordStudentCredit(TransactionRecord txn) {
     _studentTransactions.insert(0, txn);
+    if (SupabaseService.isConfigured) {
+      SupabaseService.syncTransaction(txn);
+    }
   }
 
   void recordSoundboxCredit(TransactionRecord txn) {
     _soundboxTransactions.insert(0, txn);
+    if (SupabaseService.isConfigured) {
+      SupabaseService.syncTransaction(txn);
+    }
   }
 
   /// Mark all unsynced transactions as RECONCILED with server
@@ -193,7 +203,7 @@ class LocalLedgerDb {
     int reconciledCount = 0;
     for (int i = 0; i < _studentTransactions.length; i++) {
       if (_studentTransactions[i].syncStatus == SyncStatus.offlineUnsynced) {
-        _studentTransactions[i] = TransactionRecord(
+        final reconciledTxn = TransactionRecord(
           txnId: _studentTransactions[i].txnId,
           tokenId: _studentTransactions[i].tokenId,
           merchantId: _studentTransactions[i].merchantId,
@@ -206,6 +216,10 @@ class LocalLedgerDb {
           nonce: _studentTransactions[i].nonce,
           isDebit: true,
         );
+        _studentTransactions[i] = reconciledTxn;
+        if (SupabaseService.isConfigured) {
+          SupabaseService.syncTransaction(reconciledTxn);
+        }
         reconciledCount++;
       }
     }

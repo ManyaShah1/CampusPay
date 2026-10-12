@@ -117,7 +117,7 @@ class _ScanAndPayScreenState extends State<ScanAndPayScreen>
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.white,
+                      color: AppColors.onSurface,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -719,7 +719,7 @@ class _ScanAndPayScreenState extends State<ScanAndPayScreen>
                     subtitle: 'Offline Token Cached • Tap ready',
                     icon: Icons.fitness_center_rounded,
                     iconBg: AppColors.surfaceContainerHigh,
-                    iconColor: AppColors.white,
+                    iconColor: AppColors.onSurface,
                     tagIcon: Icons.offline_pin_rounded,
                     tagColor: AppColors.onSurfaceVariant,
                     onPay: () => _navigateToEnterAmount(
@@ -743,7 +743,7 @@ class _ScanAndPayScreenState extends State<ScanAndPayScreen>
                   onPressed: _showManualUpiEntryModal,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.surfaceContainerLow,
-                    foregroundColor: AppColors.white,
+                    foregroundColor: AppColors.onSurface,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                       side: const BorderSide(color: AppColors.borderStroke),
@@ -1142,7 +1142,7 @@ class _ScanAndPayScreenState extends State<ScanAndPayScreen>
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: AppColors.white,
+                color: AppColors.onSurface,
               ),
             ),
             const SizedBox(height: 6),

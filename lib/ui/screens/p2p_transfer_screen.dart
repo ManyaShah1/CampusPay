@@ -138,7 +138,7 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
           style: GoogleFonts.bodoniModa(
             fontSize: 46,
             fontWeight: FontWeight.w800,
-            color: AppColors.white,
+            color: AppColors.onSurface,
           ),
         ),
         const SizedBox(height: 8),
@@ -346,7 +346,7 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
             style: GoogleFonts.bodoniModa(
               fontSize: 40,
               fontWeight: FontWeight.w800,
-              color: AppColors.white,
+              color: AppColors.onSurface,
             ),
           ),
           Text(
@@ -420,7 +420,7 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
           child: ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: isListening ? AppColors.cardDark : AppColors.tealAccent,
-              foregroundColor: isListening ? AppColors.white : Colors.black,
+              foregroundColor: isListening ? AppColors.onSurface : Colors.black,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             icon: Icon(isListening ? Icons.mic_off_rounded : Icons.mic_rounded),
@@ -560,7 +560,7 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
                       style: GoogleFonts.plusJakartaSans(
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
-                        color: AppColors.white,
+                        color: AppColors.onSurface,
                       ),
                     ),
                   ),
@@ -615,7 +615,7 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
                   style: GoogleFonts.bodoniModa(
                     fontSize: 36,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.white,
+                    color: AppColors.onSurface,
                   ),
                   decoration: const InputDecoration(
                     border: InputBorder.none,
@@ -822,7 +822,7 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
           style: GoogleFonts.bodoniModa(
             fontSize: 44,
             fontWeight: FontWeight.w800,
-            color: AppColors.white,
+            color: AppColors.onSurface,
           ),
         ),
         Text(
@@ -919,7 +919,7 @@ class _P2pTransferScreenState extends State<P2pTransferScreen> {
           style: GoogleFonts.jetBrainsMono(
             fontSize: 10,
             fontWeight: FontWeight.w700,
-            color: AppColors.white,
+            color: AppColors.onSurface,
           ),
         ),
       ],

@@ -219,7 +219,7 @@ class _EnterAmountScreenState extends State<EnterAmountScreen>
                                           : widget.vendorId),
                                   style: GoogleFonts.jetBrainsMono(
                                     fontSize: 10,
-                                    color: AppColors.white,
+                                    color: AppColors.onSurface,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),

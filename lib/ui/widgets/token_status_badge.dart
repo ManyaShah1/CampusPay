@@ -59,7 +59,7 @@ class TokenStatusBadge extends StatelessWidget {
             '#${index.toString().padLeft(2, '0')} ${token.tokenId.substring(8)}',
             style: GoogleFonts.jetBrainsMono(
               fontSize: 11,
-              color: AppColors.white,
+              color: AppColors.onSurface,
               fontWeight: FontWeight.w600,
             ),
           ),

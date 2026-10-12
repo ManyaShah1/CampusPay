@@ -7,11 +7,14 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/services/supabase_service.dart';
+import '../../data/models/student_profile.dart';
 
 // ---------------------------------------------------------------
 // COLORS
 // ---------------------------------------------------------------
-class AppColors {
+class AuthColors {
   static const purple = Color(0xFF6A1B9A);
   static const purpleLight = Color(0xFFF3E5F5);
   static const yellow = Color(0xFFFFC107);
@@ -19,9 +22,7 @@ class AppColors {
 }
 
 // ---------------------------------------------------------------
-// AUTH SERVICE (dummy)
-// Baad me yahin Firebase / API wala code daalna hai.
-// Baaki poori UI ko change karne ki zarurat nahi padegi.
+// AUTH SERVICE (Passwordless OTP + Student Profile)
 // ---------------------------------------------------------------
 class AppUser {
   final String name;
@@ -30,16 +31,277 @@ class AppUser {
 }
 
 class AuthService {
-  /// Current logged-in user. null = logged out.
+  static const _profileStorageKey = 'campuspay_student_profile';
+  static const _accountsRegistryKey = 'campuspay_registered_accounts';
+  static const standardOtp = '1234';
+
+  static final List<StudentProfile> _defaultDemoAccounts = [
+    const StudentProfile(
+      firstName: 'Rahul',
+      lastName: 'Sharma',
+      phone: '9876543210',
+      email: 'rahul.sharma@dbit.ac.in',
+      studentId: 'DBIT2024001',
+      collegeName: 'Don Bosco Institute of Technology',
+      branch: 'Computer Engineering',
+      year: 'Third Year (TE)',
+    ),
+  ];
+
+  /// Current logged-in student profile. null = logged out.
+  static final ValueNotifier<StudentProfile?> currentStudent = ValueNotifier(null);
+
+  /// Backwards-compatibility notifier for any UI widgets listening to currentUser
   static final ValueNotifier<AppUser?> currentUser = ValueNotifier(null);
 
+  static Future<void> init() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final data = prefs.getString(_profileStorageKey);
+      if (data != null && data.isNotEmpty) {
+        final profile = StudentProfile.fromJson(data);
+        _setProfile(profile);
+        await registerAccount(profile);
+      }
+    } catch (e) {
+      debugPrint('[AuthService] Error loading stored profile: $e');
+    }
+  }
+
+  static void _setProfile(StudentProfile? profile) {
+    currentStudent.value = profile;
+    if (profile != null) {
+      currentUser.value = AppUser(name: profile.firstName, email: profile.email);
+    } else {
+      currentUser.value = null;
+    }
+  }
+
+  static Future<void> _persistProfile(StudentProfile? profile) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (profile == null) {
+        await prefs.remove(_profileStorageKey);
+      } else {
+        await prefs.setString(_profileStorageKey, profile.toJson());
+      }
+    } catch (e) {
+      debugPrint('[AuthService] Error persisting profile: $e');
+    }
+  }
+
+  /// Get all registered accounts from local storage + built-in demo accounts
+  static Future<List<StudentProfile>> getRegisteredAccounts() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final listJson = prefs.getStringList(_accountsRegistryKey);
+      final accounts = <StudentProfile>[];
+      if (listJson != null && listJson.isNotEmpty) {
+        for (final item in listJson) {
+          try {
+            accounts.add(StudentProfile.fromJson(item));
+          } catch (_) {}
+        }
+      }
+      // Ensure seed demo accounts exist in list
+      for (final demo in _defaultDemoAccounts) {
+        final alreadyPresent = accounts.any(
+          (a) => a.phone == demo.phone || a.studentId == demo.studentId,
+        );
+        if (!alreadyPresent) {
+          accounts.add(demo);
+        }
+      }
+      return accounts;
+    } catch (e) {
+      debugPrint('[AuthService] Error reading registered accounts: $e');
+      return List.from(_defaultDemoAccounts);
+    }
+  }
+
+  /// Register or update an account in the registry
+  static Future<void> registerAccount(StudentProfile profile) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final accounts = await getRegisteredAccounts();
+      final index = accounts.indexWhere(
+        (a) => a.phone == profile.phone || a.studentId == profile.studentId,
+      );
+      if (index >= 0) {
+        accounts[index] = profile;
+      } else {
+        accounts.add(profile);
+      }
+      final serialized = accounts.map((a) => a.toJson()).toList();
+      await prefs.setStringList(_accountsRegistryKey, serialized);
+    } catch (e) {
+      debugPrint('[AuthService] Error registering account: $e');
+    }
+  }
+
+  /// Verifies if an account exists by matching Phone Number, Student ID, or Email.
+  /// Queries local registry first, then Supabase if configured.
+  static Future<StudentProfile?> findAccount(String rawIdentifier) async {
+    final identifier = rawIdentifier.trim();
+    if (identifier.isEmpty) return null;
+
+    final cleanDigits = identifier.replaceAll(RegExp(r'\D'), '');
+    final last10Digits =
+        cleanDigits.length >= 10 ? cleanDigits.substring(cleanDigits.length - 10) : cleanDigits;
+
+    // 1. Search local registered accounts
+    final accounts = await getRegisteredAccounts();
+    for (final acc in accounts) {
+      final accDigits = acc.phone.replaceAll(RegExp(r'\D'), '');
+      final accLast10 =
+          accDigits.length >= 10 ? accDigits.substring(accDigits.length - 10) : accDigits;
+
+      final phoneMatch =
+          last10Digits.isNotEmpty && (accDigits == cleanDigits || accLast10 == last10Digits);
+      final idMatch = acc.studentId.trim().toLowerCase() == identifier.toLowerCase();
+      final emailMatch = acc.email.trim().toLowerCase() == identifier.toLowerCase();
+
+      if (phoneMatch || idMatch || emailMatch) {
+        return acc;
+      }
+    }
+
+    // 2. Query Supabase if configured
+    if (SupabaseService.isConfigured) {
+      try {
+        final c = SupabaseService.client;
+        if (c != null) {
+          final query = last10Digits.isNotEmpty
+              ? c
+                  .from('profiles')
+                  .select()
+                  .or('phone.ilike.%$last10Digits%,student_id.ilike.$identifier,email.ilike.$identifier')
+                  .maybeSingle()
+              : c
+                  .from('profiles')
+                  .select()
+                  .or('student_id.ilike.$identifier,email.ilike.$identifier')
+                  .maybeSingle();
+          final data = await query;
+          if (data != null) {
+            final profile = StudentProfile.fromMap(data);
+            await registerAccount(profile);
+            return profile;
+          }
+        }
+      } catch (e) {
+        debugPrint('[AuthService] Supabase findAccount error: $e');
+      }
+    }
+
+    return null;
+  }
+
+  static bool get isLoggedIn =>
+      currentStudent.value != null ||
+      currentUser.value != null ||
+      (SupabaseService.isConfigured && SupabaseService.currentUser != null);
+
+  static String get studentName {
+    if (currentStudent.value != null) {
+      return currentStudent.value!.firstName;
+    }
+    if (currentUser.value != null) return currentUser.value!.name;
+    if (SupabaseService.currentUser != null) {
+      final meta = SupabaseService.currentUser!.userMetadata;
+      if (meta != null && meta['full_name'] != null) {
+        return meta['full_name'].toString();
+      }
+      return SupabaseService.currentUser!.email?.split('@').first ?? 'Student';
+    }
+    return 'Guest';
+  }
+
+  static Future<bool> verifyAndLogin({
+    required String otp,
+    required StudentProfile profile,
+  }) async {
+    if (otp.trim() != standardOtp) {
+      return false;
+    }
+    _setProfile(profile);
+    await _persistProfile(profile);
+    await registerAccount(profile);
+    return true;
+  }
+
+  static Future<void> updateSecondaryInfo({
+    required String collegeName,
+    required String branch,
+    required String year,
+  }) async {
+    final current = currentStudent.value;
+    if (current == null) return;
+    final updated = current.copyWith(
+      collegeName: collegeName.trim(),
+      branch: branch.trim(),
+      year: year.trim(),
+    );
+    _setProfile(updated);
+    await _persistProfile(updated);
+    await registerAccount(updated);
+  }
+
+  static Future<void> logout() async {
+    if (SupabaseService.isConfigured) {
+      SupabaseService.signOut();
+    }
+    _setProfile(null);
+    await _persistProfile(null);
+  }
+
+  static void requireAuth(
+    BuildContext context, {
+    required VoidCallback onAuthenticated,
+    String? message,
+  }) {
+    if (isLoggedIn) {
+      onAuthenticated();
+      return;
+    }
+    if (message != null && message.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: AuthColors.purple,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => LoginSignupPage(
+          onSuccess: () {
+            Navigator.pop(context);
+            onAuthenticated();
+          },
+        ),
+      ),
+    );
+  }
+
+  // Legacy fallback methods for test & backward compatibility
   static Future<void> login({
     required String email,
     required String password,
   }) async {
-    // TODO: real authentication yahan lagao
-    await Future.delayed(const Duration(milliseconds: 800)); // fake loading
-    currentUser.value = AppUser(name: email.split('@').first, email: email);
+    final name = email.split('@').first;
+    final profile = StudentProfile(
+      firstName: name,
+      lastName: '',
+      phone: '9876543210',
+      email: email,
+      studentId: 'DBIT2024001',
+    );
+    _setProfile(profile);
+    await _persistProfile(profile);
+    await registerAccount(profile);
   }
 
   static Future<void> signUp({
@@ -47,27 +309,30 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    // TODO: real authentication yahan lagao
-    await Future.delayed(const Duration(milliseconds: 800)); // fake loading
-    currentUser.value = AppUser(name: name, email: email);
+    final parts = name.trim().split(' ');
+    final first = parts.isNotEmpty ? parts.first : name;
+    final last = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+    final profile = StudentProfile(
+      firstName: first,
+      lastName: last,
+      phone: '9876543210',
+      email: email,
+      studentId: 'DBIT${DateTime.now().year.toString().substring(2)}${1000 + (name.hashCode.abs() % 9000)}',
+    );
+    _setProfile(profile);
+    await _persistProfile(profile);
+    await registerAccount(profile);
   }
 
   static Future<void> forgotPassword(String email) async {
-    // TODO: real forgot password yahan lagao
-    await Future.delayed(const Duration(milliseconds: 500));
-  }
-
-  static void logout() {
-    // TODO: real logout yahan lagao
-    currentUser.value = null;
+    await Future.delayed(const Duration(milliseconds: 300));
   }
 }
 
 // ---------------------------------------------------------------
-// LOGIN / SIGNUP PAGE
+// LOGIN / SIGNUP PAGE (PASSWORDLESS OTP + 5 PRIMARY FIELDS)
 // ---------------------------------------------------------------
 class LoginSignupPage extends StatefulWidget {
-  /// Login/signup ke baad kahan jana hai (e.g. HomePage)
   final VoidCallback onSuccess;
   const LoginSignupPage({super.key, required this.onSuccess});
 
@@ -77,76 +342,131 @@ class LoginSignupPage extends StatefulWidget {
 
 class _LoginSignupPageState extends State<LoginSignupPage> {
   final _formKey = GlobalKey<FormState>();
-  final _nameCtrl = TextEditingController();
+  final _loginIdentifierCtrl = TextEditingController();
+  final _firstNameCtrl = TextEditingController();
+  final _lastNameCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
-  final _passCtrl = TextEditingController();
+  final _studentIdCtrl = TextEditingController();
+  final _otpCtrl = TextEditingController();
 
   bool _isLogin = true;
+  bool _isOtpStep = false;
   bool _loading = false;
-  bool _hidePass = true;
+  StudentProfile? _pendingProfile;
 
   @override
   void dispose() {
-    _nameCtrl.dispose();
+    _loginIdentifierCtrl.dispose();
+    _firstNameCtrl.dispose();
+    _lastNameCtrl.dispose();
+    _phoneCtrl.dispose();
     _emailCtrl.dispose();
-    _passCtrl.dispose();
+    _studentIdCtrl.dispose();
+    _otpCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  Future<void> _requestOtp() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
 
     if (_isLogin) {
-      await AuthService.login(
-        email: _emailCtrl.text.trim(),
-        password: _passCtrl.text.trim(),
-      );
+      final identifier = _loginIdentifierCtrl.text.trim();
+      final found = await AuthService.findAccount(identifier);
+      if (found == null) {
+        setState(() => _loading = false);
+        _snack('No account found for "$identifier". Please sign up first.');
+        return;
+      }
+      _pendingProfile = found;
     } else {
-      await AuthService.signUp(
-        name: _nameCtrl.text.trim(),
+      final phone = _phoneCtrl.text.trim();
+      final studentId = _studentIdCtrl.text.trim().toUpperCase();
+
+      final existingByPhone = await AuthService.findAccount(phone);
+      if (existingByPhone != null) {
+        setState(() => _loading = false);
+        _snack('An account with this phone number already exists. Please login instead.');
+        return;
+      }
+
+      final existingById = await AuthService.findAccount(studentId);
+      if (existingById != null) {
+        setState(() => _loading = false);
+        _snack('An account with Student ID "$studentId" already exists. Please login instead.');
+        return;
+      }
+
+      _pendingProfile = StudentProfile(
+        firstName: _firstNameCtrl.text.trim(),
+        lastName: _lastNameCtrl.text.trim(),
+        phone: phone,
         email: _emailCtrl.text.trim(),
-        password: _passCtrl.text.trim(),
+        studentId: studentId,
       );
     }
 
-    if (!mounted) return;
-    setState(() => _loading = false);
-    widget.onSuccess();
+    setState(() {
+      _loading = false;
+      _isOtpStep = true;
+      _otpCtrl.clear();
+    });
+
+    _snack('Verification code sent successfully.');
   }
 
-  Future<void> _forgotPassword() async {
-    final email = _emailCtrl.text.trim();
-    if (email.isEmpty) {
-      _snack('Please enter your email first.');
+  Future<void> _verifyOtp() async {
+    final otp = _otpCtrl.text.trim();
+    if (otp.length < 4) {
+      _snack('Please enter the 4-digit verification code.');
       return;
     }
-    await AuthService.forgotPassword(email);
-    _snack('Password reset link sent (demo).');
+    setState(() => _loading = true);
+
+    if (_pendingProfile == null) {
+      setState(() => _loading = false);
+      return;
+    }
+
+    final success = await AuthService.verifyAndLogin(
+      otp: otp,
+      profile: _pendingProfile!,
+    );
+
+    setState(() => _loading = false);
+
+    if (success) {
+      if (!mounted) return;
+      widget.onSuccess();
+    } else {
+      _snack('Invalid verification code! Please enter the correct code.');
+    }
   }
 
   void _snack(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: AppColors.purple),
+      SnackBar(content: Text(msg), backgroundColor: AuthColors.purple),
     );
   }
 
-  InputDecoration _decoration(String label, IconData icon, {Widget? suffix}) {
+  InputDecoration _decoration(String label, IconData icon, {Widget? suffix, String? hint}) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: AppColors.purple),
+      hintText: hint,
+      prefixIcon: Icon(icon, color: AuthColors.purple),
       suffixIcon: suffix,
       filled: true,
-      fillColor: AppColors.purpleLight.withOpacity(0.5),
-      labelStyle: const TextStyle(color: AppColors.purple),
+      fillColor: AuthColors.purpleLight.withOpacity(0.5),
+      labelStyle: const TextStyle(color: AuthColors.purple),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide.none,
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: AppColors.yellow, width: 2),
+        borderSide: const BorderSide(color: AuthColors.yellow, width: 2),
       ),
     );
   }
@@ -154,26 +474,54 @@ class _LoginSignupPageState extends State<LoginSignupPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.white,
+      backgroundColor: AuthColors.white,
       body: Stack(
         children: [
-          // ---- CampusPay style background (code se bana, no image) ----
+          // ---- CampusPay style background ----
           const Positioned.fill(child: _CampusBackground()),
+          if (Navigator.canPop(context))
+            Positioned(
+              top: 16,
+              left: 16,
+              child: SafeArea(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(9999),
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.close_rounded, color: AuthColors.purple, size: 22),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 400),
+                  constraints: const BoxConstraints(maxWidth: 420),
                   child: Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.93),
+                      color: Colors.white.withOpacity(0.95),
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: AppColors.purple, width: 2),
+                      border: Border.all(color: AuthColors.purple, width: 2),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.purple.withOpacity(0.15),
+                          color: AuthColors.purple.withOpacity(0.15),
                           blurRadius: 24,
                           offset: const Offset(0, 8),
                         ),
@@ -181,153 +529,7 @@ class _LoginSignupPageState extends State<LoginSignupPage> {
                     ),
                     child: Form(
                       key: _formKey,
-                      child: Column(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: const BoxDecoration(
-                              color: AppColors.purple,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.person, size: 48, color: AppColors.yellow),
-                          ),
-                          const SizedBox(height: 20),
-                          Text(
-                            _isLogin ? 'Welcome Back!' : 'Create Account',
-                            style: const TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.purple,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            _isLogin ? 'Log in to your account' : 'Create a new account',
-                            style: TextStyle(color: Colors.grey.shade600),
-                          ),
-                          const SizedBox(height: 28),
-
-                          // Login / Signup toggle
-                          Container(
-                            decoration: BoxDecoration(
-                              color: AppColors.purpleLight,
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            child: Row(
-                              children: [
-                                _toggleButton('Login', _isLogin, () => setState(() => _isLogin = true)),
-                                _toggleButton('Sign Up', !_isLogin, () => setState(() => _isLogin = false)),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-
-                          if (!_isLogin) ...[
-                            TextFormField(
-                              controller: _nameCtrl,
-                              decoration: _decoration('Full Name', Icons.person_outline),
-                              validator: (v) =>
-                              (v == null || v.trim().isEmpty) ? 'Please enter your name' : null,
-                            ),
-                            const SizedBox(height: 16),
-                          ],
-
-                          TextFormField(
-                            controller: _emailCtrl,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: _decoration('Email', Icons.email_outlined),
-                            validator: (v) {
-                              if (v == null || v.trim().isEmpty) return 'Please enter your email';
-                              if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim())) {
-                                return 'Please enter a valid email';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-
-                          TextFormField(
-                            controller: _passCtrl,
-                            obscureText: _hidePass,
-                            decoration: _decoration(
-                              'Password',
-                              Icons.lock_outline,
-                              suffix: IconButton(
-                                icon: Icon(
-                                  _hidePass ? Icons.visibility_off : Icons.visibility,
-                                  color: AppColors.purple,
-                                ),
-                                onPressed: () => setState(() => _hidePass = !_hidePass),
-                              ),
-                            ),
-                            validator: (v) =>
-                            (v == null || v.length < 6) ? 'At least 6 characters' : null,
-                          ),
-
-                          if (_isLogin)
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton(
-                                onPressed: _forgotPassword,
-                                child: const Text('Forgot Password?',
-                                    style: TextStyle(color: AppColors.purple)),
-                              ),
-                            ),
-                          const SizedBox(height: 16),
-
-                          // Main button: yellow with purple text
-                          SizedBox(
-                            width: double.infinity,
-                            height: 52,
-                            child: ElevatedButton(
-                              onPressed: _loading ? null : _submit,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.yellow,
-                                foregroundColor: AppColors.purple,
-                                elevation: 2,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                              ),
-                              child: _loading
-                                  ? const SizedBox(
-                                height: 24,
-                                width: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 3,
-                                  color: AppColors.purple,
-                                ),
-                              )
-                                  : Text(
-                                _isLogin ? 'LOGIN' : 'SIGN UP',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Text(_isLogin ? "Don't have an account? " : 'Already have an account? '),
-                              TextButton(
-                                onPressed: () => setState(() => _isLogin = !_isLogin),
-                                child: Text(
-                                  _isLogin ? 'Sign Up' : 'Login',
-                                  style: const TextStyle(
-                                    color: AppColors.purple,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                      child: _isOtpStep ? _buildOtpView() : _buildPrimaryDetailsView(),
                     ),
                   ),
                 ),
@@ -339,6 +541,330 @@ class _LoginSignupPageState extends State<LoginSignupPage> {
     );
   }
 
+  Widget _buildPrimaryDetailsView() {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(
+            color: AuthColors.purple,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.shield_rounded, size: 44, color: AuthColors.yellow),
+        ),
+        const SizedBox(height: 18),
+        Text(
+          _isLogin ? 'Welcome Back!' : 'Student Account',
+          style: const TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.bold,
+            color: AuthColors.purple,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          _isLogin
+              ? 'Login with Phone Number or Student ID'
+              : 'Enter primary details for instant campus verification',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+        ),
+        const SizedBox(height: 22),
+
+        // Login / Signup toggle
+        Container(
+          decoration: BoxDecoration(
+            color: AuthColors.purpleLight,
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: Row(
+            children: [
+              _toggleButton('Login', _isLogin, () {
+                setState(() => _isLogin = true);
+              }),
+              _toggleButton('Sign Up', !_isLogin, () {
+                setState(() => _isLogin = false);
+              }),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        if (_isLogin) ...[
+          TextFormField(
+            controller: _loginIdentifierCtrl,
+            decoration: _decoration(
+              'Phone Number or Student ID',
+              Icons.phone_android_rounded,
+              hint: 'e.g. 9876543210 or DBIT2024021',
+            ),
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) {
+                return 'Please enter your phone number or student ID';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AuthColors.purpleLight.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.verified_user_outlined, size: 16, color: AuthColors.purple),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Passwordless login: Verification OTP will be requested.',
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ] else ...[
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _firstNameCtrl,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: _decoration('First Name', Icons.person_outline),
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextFormField(
+                  controller: _lastNameCtrl,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: _decoration('Last Name', Icons.person_outline),
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          TextFormField(
+            controller: _phoneCtrl,
+            keyboardType: TextInputType.phone,
+            decoration: _decoration('Phone Number', Icons.phone_android_rounded, hint: '10-digit mobile'),
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) return 'Enter mobile number';
+              if (v.trim().replaceAll(RegExp(r'\D'), '').length < 10) {
+                return 'Enter valid 10-digit number';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 14),
+
+          TextFormField(
+            controller: _emailCtrl,
+            keyboardType: TextInputType.emailAddress,
+            decoration: _decoration('Campus Email ID', Icons.email_outlined, hint: 'student@dbit.ac.in'),
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) return 'Enter email address';
+              if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim())) {
+                return 'Enter valid email address';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 14),
+
+          TextFormField(
+            controller: _studentIdCtrl,
+            textCapitalization: TextCapitalization.characters,
+            decoration: _decoration('Student ID', Icons.badge_outlined, hint: 'e.g. DBIT2024021'),
+            validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter Student ID' : null,
+          ),
+        ],
+
+        const SizedBox(height: 24),
+
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton(
+            onPressed: _loading ? null : _requestOtp,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AuthColors.yellow,
+              foregroundColor: AuthColors.purple,
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            child: _loading
+                ? const SizedBox(
+                    height: 22,
+                    width: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: AuthColors.purple,
+                    ),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _isLogin ? 'GET OTP & LOGIN' : 'GET OTP & REGISTER',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.arrow_forward_rounded, size: 18),
+                    ],
+                  ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(_isLogin ? "New student? " : 'Already registered? '),
+            TextButton(
+              onPressed: () => setState(() => _isLogin = !_isLogin),
+              child: Text(
+                _isLogin ? 'Sign Up' : 'Login',
+                style: const TextStyle(
+                  color: AuthColors.purple,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOtpView() {
+    final identifier = _pendingProfile?.phone.isNotEmpty == true
+        ? _pendingProfile!.phone
+        : (_pendingProfile?.studentId ?? 'your device');
+
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(
+            color: AuthColors.purple,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.lock_clock_rounded, size: 44, color: AuthColors.yellow),
+        ),
+        const SizedBox(height: 18),
+        const Text(
+          'Verify OTP',
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.bold,
+            color: AuthColors.purple,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Verification code sent to $identifier',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+        ),
+        const SizedBox(height: 16),
+
+        const SizedBox(height: 24),
+
+        // OTP PIN field
+        TextFormField(
+          controller: _otpCtrl,
+          keyboardType: TextInputType.number,
+          maxLength: 4,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 22,
+            color: AuthColors.purple,
+          ),
+          decoration: InputDecoration(
+            counterText: '',
+            hintText: '••••',
+            hintStyle: const TextStyle(letterSpacing: 22, color: Colors.grey),
+            filled: true,
+            fillColor: AuthColors.purpleLight.withOpacity(0.5),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: AuthColors.yellow, width: 2),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton(
+            onPressed: _loading ? null : _verifyOtp,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AuthColors.yellow,
+              foregroundColor: AuthColors.purple,
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            child: _loading
+                ? const SizedBox(
+                    height: 22,
+                    width: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: AuthColors.purple,
+                    ),
+                  )
+                : const Text(
+                    'VERIFY & PROCEED',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            TextButton.icon(
+              onPressed: () => setState(() => _isOtpStep = false),
+              icon: const Icon(Icons.arrow_back_rounded, size: 16, color: AuthColors.purple),
+              label: const Text('Edit Details', style: TextStyle(color: AuthColors.purple)),
+            ),
+            TextButton(
+              onPressed: () => _snack('Verification code resent successfully.'),
+              child: const Text('Resend Code', style: TextStyle(color: AuthColors.purple)),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _toggleButton(String text, bool selected, VoidCallback onTap) {
     return Expanded(
       child: GestureDetector(
@@ -347,7 +873,7 @@ class _LoginSignupPageState extends State<LoginSignupPage> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: selected ? AppColors.purple : Colors.transparent,
+            color: selected ? AuthColors.purple : Colors.transparent,
             borderRadius: BorderRadius.circular(30),
           ),
           child: Center(
@@ -355,7 +881,7 @@ class _LoginSignupPageState extends State<LoginSignupPage> {
               text,
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: selected ? AppColors.yellow : AppColors.purple,
+                color: selected ? AuthColors.yellow : AuthColors.purple,
               ),
             ),
           ),
@@ -380,25 +906,25 @@ class ProfileAuthSection extends StatelessWidget {
       builder: (context, user, _) {
         if (user == null) {
           return Card(
-            color: AppColors.purpleLight,
+            color: AuthColors.purpleLight,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  const Icon(Icons.account_circle, size: 64, color: AppColors.purple),
+                  const Icon(Icons.account_circle, size: 64, color: AuthColors.purple),
                   const SizedBox(height: 8),
                   const Text(
                     'You are not logged in',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.purple),
+                    style: TextStyle(fontWeight: FontWeight.bold, color: AuthColors.purple),
                   ),
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.yellow,
-                        foregroundColor: AppColors.purple,
+                        backgroundColor: AuthColors.yellow,
+                        foregroundColor: AuthColors.purple,
                       ),
                       onPressed: () {
                         Navigator.push(
@@ -423,7 +949,7 @@ class ProfileAuthSection extends StatelessWidget {
         }
 
         return Card(
-          color: AppColors.purpleLight,
+          color: AuthColors.purpleLight,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -431,10 +957,10 @@ class ProfileAuthSection extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 32,
-                  backgroundColor: AppColors.purple,
+                  backgroundColor: AuthColors.purple,
                   child: Text(
                     (user.name.isNotEmpty ? user.name[0] : 'U').toUpperCase(),
-                    style: const TextStyle(fontSize: 28, color: AppColors.yellow),
+                    style: const TextStyle(fontSize: 28, color: AuthColors.yellow),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -443,15 +969,15 @@ class ProfileAuthSection extends StatelessWidget {
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
-                    color: AppColors.purple,
+                    color: AuthColors.purple,
                   ),
                 ),
                 Text(user.email),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.purple,
-                    side: const BorderSide(color: AppColors.purple),
+                    foregroundColor: AuthColors.purple,
+                    side: const BorderSide(color: AuthColors.purple),
                   ),
                   onPressed: AuthService.logout,
                   icon: const Icon(Icons.logout),

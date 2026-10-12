@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/services/razorpay_service.dart';
+import '../auth/login_signup_page.dart';
 import '../viewmodels/wallet_viewmodel.dart';
 import 'campus_coins_screen.dart';
 import 'p2p_transfer_screen.dart';
@@ -16,12 +17,14 @@ import '../widgets/home_tour_overlay.dart';
 class StudentHomeScreen extends StatefulWidget {
   final VoidCallback? onNavigateToHistory;
   final VoidCallback? onNavigateToRewards;
+  final VoidCallback? onNavigateToProfile;
   final bool initialShowTour;
 
   const StudentHomeScreen({
     super.key,
     this.onNavigateToHistory,
     this.onNavigateToRewards,
+    this.onNavigateToProfile,
     this.initialShowTour = false,
   });
 
@@ -35,78 +38,82 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   late final RazorpayService _razorpayService;
 
   // GlobalKeys for Element Spotlight Tour
+  final GlobalKey _profileKey = GlobalKey();
   final GlobalKey _balanceKey = GlobalKey();
   final GlobalKey _addMoneyKey = GlobalKey();
   final GlobalKey _offlineTokensKey = GlobalKey();
+  final GlobalKey _paymentOptionsKey = GlobalKey();
   final GlobalKey _scanPayKey = GlobalKey();
   final GlobalKey _sendP2pKey = GlobalKey();
   final GlobalKey _paymentModeKey = GlobalKey();
   final GlobalKey _rewardsKey = GlobalKey();
 
+  bool _isBalanceVisible = false;
+
   List<TourElementTarget> get _tourTargets => [
     TourElementTarget(
-      key: _balanceKey,
-      badge: 'WALLET BALANCE',
-      title: 'Available Campus Balance',
+      key: _profileKey,
+      badge: 'STUDENT PROFILE',
+      title: 'Student Identity & Settings',
       description:
-          'Your live wallet balance secured with on-device AES-256 encryption. Automatically updates when you pay at campus stalls or recharge.',
+          'Tap your avatar to access your student ID, complete Stage 2 academic details (branch, year, college), or manage verified campus preferences.',
+      icon: Icons.person_rounded,
+      accentColor: AppColors.lightPurple,
+      actionTip: 'Tap anytime to view or edit account details',
+    ),
+    TourElementTarget(
+      key: _balanceKey,
+      badge: 'ENCRYPTED WALLET BALANCE',
+      title: 'Hashed Campus Balance',
+      description:
+          'Your live balance is encrypted on-device with AES-256. Click the eye button beside it anytime to reveal or hide your balance for privacy.',
       icon: Icons.account_balance_wallet_rounded,
       accentColor: AppColors.electricYellow,
-      actionTip: 'Encrypted on-device with zero mock data',
+      actionTip: 'Tap the eye icon to reveal / mask balance',
     ),
     TourElementTarget(
       key: _addMoneyKey,
-      badge: 'INSTANT TOP-UP',
+      badge: 'INSTANT RECHARGE',
       title: 'Add Money via Razorpay',
       description:
-          'Tap this button anytime to reload your campus wallet with real money using UPI (GPay, PhonePe), cards, or net banking via Razorpay.',
+          'Reload your campus wallet anytime using UPI (GPay, PhonePe, Paytm), debit cards, or net banking via Razorpay.',
       icon: Icons.add_circle_rounded,
       accentColor: AppColors.electricYellow,
       actionTip: 'Quick preset reloads: +₹200, +₹500, +₹1,000',
     ),
     TourElementTarget(
-      key: _offlineTokensKey,
-      badge: 'OFFLINE TOKENS',
-      title: 'Cryptographic Offline Tokens',
+      key: _paymentOptionsKey,
+      badge: 'PAYMENT OPTIONS',
+      title: 'Fast Campus Payment Hub',
       description:
-          '10 pre-authorized ECDSA tokens stored on your device that enable seamless payments when campus Wi-Fi or cellular data drops.',
-      icon: Icons.token_rounded,
+          'All campus payment options at your fingertips: Scan & Pay merchant stands, Send P2P funds to classmates, Receive tokens, or dial USSD *99#.',
+      icon: Icons.payments_rounded,
       accentColor: AppColors.lightPurple,
-      actionTip: 'Automatically re-authorized every 48 hours',
+      actionTip: 'Quick access to QR, P2P transfer, or USSD',
     ),
     TourElementTarget(
       key: _scanPayKey,
-      badge: 'CAMERA SCANNER',
-      title: 'Scan & Pay Anywhere',
+      badge: 'QR SCANNER',
+      title: 'Instant QR Scan & Pay',
       description:
-          'Opens your camera to scan merchant QR stands at DBIT Canteen, stationery stalls, and student fest counters with automatic UPI parsing.',
+          'Point your camera at QR stands at the DBIT Canteen, stationery shop, or college fest counters for immediate zero-lag payments.',
       icon: Icons.qr_code_scanner_rounded,
       accentColor: AppColors.electricYellow,
-      actionTip: 'Includes torch switch & manual UPI ID entry',
-    ),
-    TourElementTarget(
-      key: _sendP2pKey,
-      badge: 'PEER-TO-PEER',
-      title: 'Send Money to Friends',
-      description:
-          'Transfer funds directly to nearby classmates without internet. Uses device-to-device ultrasonic acoustic soundwaves or Bluetooth.',
-      icon: Icons.send_rounded,
-      accentColor: AppColors.lightPurple,
-      actionTip: 'Zero internet required between two phones',
+      actionTip: 'Includes built-in torch & manual UPI ID entry',
     ),
     TourElementTarget(
       key: _paymentModeKey,
       badge: 'MULTI-CHANNEL ENGINE',
       title: 'Zero-Drop Payment Protocol',
       description:
-          'CampusPay actively monitors Online UPI, Ultrasonic Audio, and USSD *99# to ensure zero transaction failures anywhere on campus.',
+          'CampusPay actively routes transactions across Online UPI, Ultrasonic Audio (FSK soundwaves), and USSD *99# to guarantee zero transaction failures.',
       icon: Icons.sensors_rounded,
       accentColor: AppColors.successGreen,
-      actionTip: 'Guaranteed 100% transaction completion',
+      actionTip: 'Guaranteed 100% completion even with zero internet',
     ),
     TourElementTarget(
       key: _rewardsKey,
-      badge: 'CAMPUS REWARDS',
+      badge: 'COINS & REWARDS',
       title: 'CampusCoins Rewards Vault',
       description:
           'Shows your accumulated coins from spending. Tap here to open the Vault and redeem free snacks at the canteen, stationery discounts, and event passes.',
@@ -166,7 +173,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                       '₹${amount.toInt()} Added to Campus Wallet!',
                       style: GoogleFonts.plusJakartaSans(
                         fontWeight: FontWeight.w700,
-                        color: AppColors.white,
+                        color: AppColors.onSurface,
                       ),
                     ),
                     Text(
@@ -213,7 +220,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                       'Payment Cancelled or Failed',
                       style: GoogleFonts.plusJakartaSans(
                         fontWeight: FontWeight.w700,
-                        color: AppColors.white,
+                        color: AppColors.onSurface,
                       ),
                     ),
                     Text(
@@ -242,7 +249,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           behavior: SnackBarBehavior.floating,
           content: Text(
             'Redirecting to ${response.walletName ?? "External Wallet"}...',
-            style: GoogleFonts.plusJakartaSans(color: AppColors.white),
+            style: GoogleFonts.plusJakartaSans(color: AppColors.onSurface),
           ),
         ),
       );
@@ -277,7 +284,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
               'DBIT NFC Tap & Pay Armed (18.4 kHz)',
               style: GoogleFonts.plusJakartaSans(
                 fontWeight: FontWeight.w700,
-                color: AppColors.white,
+                color: AppColors.onSurface,
               ),
             ),
           ],
@@ -528,12 +535,12 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   Widget build(BuildContext context) {
     final walletVM = context.watch<WalletViewModel>();
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundBlack,
-      appBar: _buildHeader(context),
-      body: Stack(
-        children: [
-          SafeArea(
+    return Stack(
+      children: [
+        Scaffold(
+          backgroundColor: AppColors.backgroundBlack,
+          appBar: _buildHeader(context),
+          body: SafeArea(
             child: RefreshIndicator(
               onRefresh: () async => walletVM.refresh(),
               color: AppColors.electricYellow,
@@ -557,16 +564,22 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                           Row(
                             children: [
                               Flexible(
-                                child: Text(
-                                  'Hey, Manya',
-                                  style: GoogleFonts.bodoniModa(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.onSurface,
-                                    letterSpacing: -0.5,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                child: ValueListenableBuilder<AppUser?>(
+                                  valueListenable: AuthService.currentUser,
+                                  builder: (context, user, _) {
+                                    final displayName = AuthService.studentName;
+                                    return Text(
+                                      'Hey, $displayName',
+                                      style: GoogleFonts.bodoniModa(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppColors.onSurface,
+                                        letterSpacing: -0.5,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    );
+                                  },
                                 ),
                               ),
                               const SizedBox(width: 6),
@@ -799,23 +812,61 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
                           const SizedBox(height: 16),
 
-                          Text(
-                            'AVAILABLE BALANCE',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.lightPurpleDim,
-                              letterSpacing: 1.2,
-                            ),
+                          Row(
+                            children: [
+                              Text(
+                                'AVAILABLE BALANCE',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.lightPurpleDim,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: () {
+                                  HapticFeedback.lightImpact();
+                                  setState(() => _isBalanceVisible = !_isBalanceVisible);
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(9999),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        _isBalanceVisible
+                                            ? Icons.visibility_rounded
+                                            : Icons.visibility_off_rounded,
+                                        size: 13,
+                                        color: AppColors.electricYellow,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        _isBalanceVisible ? 'HIDE' : 'REVEAL',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppColors.electricYellow,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 4),
 
-                          // Large Bodoni Moda Balance
+                          // Large Bodoni Moda Balance (Hashed / Masked with Eye Toggle)
                           Container(
                             key: _balanceKey,
                             child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.baseline,
-                              textBaseline: TextBaseline.alphabetic,
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 Text(
                                   '₹',
@@ -825,27 +876,74 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                     color: AppColors.electricYellow,
                                   ),
                                 ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${walletVM.balance.toInt()}',
-                                  style: GoogleFonts.bodoniModa(
-                                    fontSize: 44,
-                                    fontWeight: FontWeight.w900,
-                                    color: AppColors.white,
-                                    letterSpacing: -1,
+                                const SizedBox(width: 6),
+                                if (_isBalanceVisible) ...[
+                                  Text(
+                                    '${walletVM.balance.toInt()}',
+                                    style: GoogleFonts.bodoniModa(
+                                      fontSize: 44,
+                                      fontWeight: FontWeight.w900,
+                                      color: AppColors.white,
+                                      letterSpacing: -1,
+                                    ),
                                   ),
-                                ),
-                                Text(
-                                  '.00',
-                                  style: GoogleFonts.bodoniModa(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.lightPurpleDim,
+                                  Text(
+                                    '.${((walletVM.balance - walletVM.balance.toInt()) * 100).toInt().toString().padLeft(2, '0')}',
+                                    style: GoogleFonts.bodoniModa(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.lightPurpleDim,
+                                    ),
                                   ),
+                                ] else ...[
+                                  // Hashed / Cryptographically Masked Balance
+                                  Text(
+                                    '••••••••',
+                                    style: GoogleFonts.bodoniModa(
+                                      fontSize: 38,
+                                      fontWeight: FontWeight.w900,
+                                      color: AppColors.white.withValues(alpha: 0.9),
+                                      letterSpacing: 4,
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  onPressed: () {
+                                    HapticFeedback.lightImpact();
+                                    setState(() => _isBalanceVisible = !_isBalanceVisible);
+                                  },
+                                  icon: Icon(
+                                    _isBalanceVisible
+                                        ? Icons.visibility_rounded
+                                        : Icons.visibility_off_rounded,
+                                    color: AppColors.electricYellow,
+                                    size: 22,
+                                  ),
+                                  tooltip: _isBalanceVisible ? 'Hide Balance' : 'Reveal Balance',
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
                                 ),
                               ],
                             ),
                           ),
+                          if (!_isBalanceVisible) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(Icons.shield_outlined, size: 12, color: AppColors.lightPurpleDim),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'AES-256 Hashed • Tap eye to view balance',
+                                  style: GoogleFonts.jetBrainsMono(
+                                    fontSize: 10,
+                                    color: AppColors.lightPurpleDim,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
 
                           const SizedBox(height: 18),
 
@@ -865,10 +963,13 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                 Flexible(
                                   child: GestureDetector(
                                     key: _offlineTokensKey,
-                                    onTap: () => Navigator.push(
+                                    onTap: () => AuthService.requireAuth(
                                       context,
-                                      MaterialPageRoute(
-                                        builder: (_) => const TokenVaultScreen(),
+                                      onAuthenticated: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => const TokenVaultScreen(),
+                                        ),
                                       ),
                                     ),
                                     child: Row(
@@ -899,7 +1000,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                 const SizedBox(width: 8),
                                 ElevatedButton.icon(
                                   key: _addMoneyKey,
-                                  onPressed: _showAddMoneyModal,
+                                  onPressed: () => AuthService.requireAuth(
+                                    context,
+                                    onAuthenticated: _showAddMoneyModal,
+                                  ),
                                   icon: const Icon(Icons.add_rounded, size: 16),
                                   label: Text(
                                     'Add Money',
@@ -957,73 +1061,88 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                 ),
                 const SizedBox(height: 10),
 
-                Row(
-                  children: [
-                    // 1. Scan & Pay
-                    _buildBentoAction(
-                      actionKey: _scanPayKey,
-                      icon: Icons.qr_code_scanner_rounded,
-                      iconBg: AppColors.electricYellow.withValues(alpha: 0.2),
-                      iconColor: AppColors.electricYellow,
-                      label: 'Scan & Pay',
-                      tagText: 'FAST',
-                      tagBg: AppColors.electricYellow,
-                      tagTextColor: AppColors.onElectricYellow,
-                      hasDot: true,
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ScanAndPayScreen(),
+                Container(
+                  key: _paymentOptionsKey,
+                  child: Row(
+                    children: [
+                      // 1. Scan & Pay
+                      _buildBentoAction(
+                        actionKey: _scanPayKey,
+                        icon: Icons.qr_code_scanner_rounded,
+                        iconBg: AppColors.electricYellow.withValues(alpha: 0.2),
+                        iconColor: AppColors.electricYellow,
+                        label: 'Scan & Pay',
+                        tagText: 'FAST',
+                        tagBg: AppColors.electricYellow,
+                        tagTextColor: AppColors.onElectricYellow,
+                        hasDot: true,
+                        onTap: () => AuthService.requireAuth(
+                          context,
+                          onAuthenticated: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ScanAndPayScreen(),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
+                      const SizedBox(width: 8),
 
-                    // 2. Send P2P
-                    _buildBentoAction(
-                      actionKey: _sendP2pKey,
-                      icon: Icons.send_rounded,
-                      iconBg: AppColors.deepPurple.withValues(alpha: 0.35),
-                      iconColor: AppColors.lightPurple,
-                      label: 'Send P2P',
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const P2pTransferScreen(),
+                      // 2. Send P2P
+                      _buildBentoAction(
+                        actionKey: _sendP2pKey,
+                        icon: Icons.send_rounded,
+                        iconBg: AppColors.deepPurple.withValues(alpha: 0.35),
+                        iconColor: AppColors.lightPurple,
+                        label: 'Send P2P',
+                        onTap: () => AuthService.requireAuth(
+                          context,
+                          onAuthenticated: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const P2pTransferScreen(),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
+                      const SizedBox(width: 8),
 
-                    // 3. Receive
-                    _buildBentoAction(
-                      icon: Icons.call_received_rounded,
-                      iconBg: AppColors.surfaceContainerHigh,
-                      iconColor: AppColors.onSurface,
-                      label: 'Receive',
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const TokenVaultScreen(),
+                      // 3. Receive
+                      _buildBentoAction(
+                        icon: Icons.call_received_rounded,
+                        iconBg: AppColors.surfaceContainerHigh,
+                        iconColor: AppColors.onSurface,
+                        label: 'Receive',
+                        onTap: () => AuthService.requireAuth(
+                          context,
+                          onAuthenticated: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const TokenVaultScreen(),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
+                      const SizedBox(width: 8),
 
-                    // 4. USSD Offline
-                    _buildBentoAction(
-                      icon: Icons.dialpad_rounded,
-                      iconBg: AppColors.surfaceContainerHigh,
-                      iconColor: AppColors.onSurface,
-                      label: 'USSD *99#',
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const UssdSessionScreen(),
+                      // 4. USSD Offline
+                      _buildBentoAction(
+                        icon: Icons.dialpad_rounded,
+                        iconBg: AppColors.surfaceContainerHigh,
+                        iconColor: AppColors.onSurface,
+                        label: 'USSD *99#',
+                        onTap: () => AuthService.requireAuth(
+                          context,
+                          onAuthenticated: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const UssdSessionScreen(),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
 
                 const SizedBox(height: 20),
@@ -1148,16 +1267,21 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                 GestureDetector(
                   key: _rewardsKey,
                   onTap: () {
-                    if (widget.onNavigateToRewards != null) {
-                      widget.onNavigateToRewards!();
-                    } else {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const CampusCoinsScreen(),
-                        ),
-                      );
-                    }
+                    AuthService.requireAuth(
+                      context,
+                      onAuthenticated: () {
+                        if (widget.onNavigateToRewards != null) {
+                          widget.onNavigateToRewards!();
+                        } else {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const CampusCoinsScreen(),
+                            ),
+                          );
+                        }
+                      },
+                    );
                   },
                   child: Container(
                     padding: const EdgeInsets.all(16),
@@ -1336,15 +1460,15 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           ),
         ),
       ),
-      if (_showTour)
-        Positioned.fill(
-          child: HomeTourOverlay(
-            targets: _tourTargets,
-            onFinish: () => setState(() => _showTour = false),
-          ),
+    ),
+    if (_showTour)
+      Positioned.fill(
+        child: HomeTourOverlay(
+          targets: _tourTargets,
+          onFinish: () => setState(() => _showTour = false),
         ),
-    ],
-  ),
+      ),
+  ],
 );
   }
 
@@ -1427,31 +1551,51 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           ),
           tooltip: 'App Tour',
         ),
-        Container(
-          width: 36,
-          height: 36,
-          margin: const EdgeInsets.only(right: 16),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.borderStroke),
-          ),
-          child: ClipOval(
-            child: Image.asset(
-              'assets/images/profile_avatar.png',
-              width: 36,
-              height: 36,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => Center(
-                child: Text(
-                  'M',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.onSurface,
-                  ),
+        GestureDetector(
+          key: _profileKey,
+          onTap: () {
+            AuthService.requireAuth(
+              context,
+              onAuthenticated: () {
+                if (widget.onNavigateToProfile != null) {
+                  widget.onNavigateToProfile!();
+                }
+              },
+            );
+          },
+          child: ValueListenableBuilder<AppUser?>(
+            valueListenable: AuthService.currentUser,
+            builder: (context, user, _) {
+              final initial = AuthService.isLoggedIn
+                  ? (AuthService.studentName.isNotEmpty ? AuthService.studentName[0].toUpperCase() : 'S')
+                  : null;
+              return Container(
+                width: 36,
+                height: 36,
+                margin: const EdgeInsets.only(right: 16),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.surfaceContainerLow,
+                  border: Border.all(color: AppColors.borderStroke),
                 ),
-              ),
-            ),
+                child: Center(
+                  child: initial != null
+                      ? Text(
+                          initial,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.onSurface,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.person_outline_rounded,
+                          size: 18,
+                          color: AppColors.onSurface,
+                        ),
+                ),
+              );
+            },
           ),
         ),
       ],

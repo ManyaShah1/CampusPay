@@ -12,7 +12,8 @@ class BleP2pTransport {
 
   BleP2pTransport._internal();
 
-  final CentralManager _centralManager = CentralManager();
+  CentralManager? _centralManagerInstance;
+  CentralManager get _centralManager => _centralManagerInstance ??= CentralManager();
 
   StreamSubscription<DiscoveredEventArgs>? _discoveredSubscription;
 
@@ -36,6 +37,10 @@ class BleP2pTransport {
   Future<bool> sendPayment({
     required Map<String, dynamic> paymentData,
   }) async {
+    if (kIsWeb) {
+      debugPrint('[BLE-P2P] BLE transport unavailable on Web');
+      return false;
+    }
     try {
       debugPrint('[BLE-P2P] Starting payment transfer');
 

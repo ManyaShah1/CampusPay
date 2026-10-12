@@ -155,7 +155,7 @@ class _UssdSessionScreenState extends State<UssdSessionScreen>
       backgroundColor: AppColors.backgroundBlack,
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.white),
+        icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.onSurface),
         onPressed: () {
           if (_currentStep > 0 && _currentStep < 2) {
             _goToStep(_currentStep - 1);
@@ -174,7 +174,7 @@ class _UssdSessionScreenState extends State<UssdSessionScreen>
               fontSize: 15,
               fontWeight: FontWeight.w800,
               letterSpacing: 1.2,
-              color: AppColors.white,
+              color: AppColors.onSurface,
             ),
           ),
           Text(
@@ -271,7 +271,7 @@ class _UssdSessionScreenState extends State<UssdSessionScreen>
             style: const TextStyle(
               fontFamily: 'JetBrainsMono',
               fontSize: 18,
-              color: AppColors.white,
+              color: AppColors.onSurface,
               letterSpacing: 0.5,
             ),
             decoration: InputDecoration(
@@ -386,7 +386,7 @@ class _UssdSessionScreenState extends State<UssdSessionScreen>
               fontFamily: 'SpaceGrotesk',
               fontSize: 40,
               fontWeight: FontWeight.w800,
-              color: AppColors.white,
+              color: AppColors.onSurface,
             ),
             decoration: InputDecoration(
               filled: true,
@@ -421,7 +421,7 @@ class _UssdSessionScreenState extends State<UssdSessionScreen>
                 child: Chip(
                   label: Text('₹$amt', style: const TextStyle(fontSize: 12)),
                   backgroundColor: AppColors.cardDark,
-                  labelStyle: const TextStyle(color: AppColors.white, fontFamily: 'SpaceGrotesk'),
+                  labelStyle: const TextStyle(color: AppColors.onSurface, fontFamily: 'SpaceGrotesk'),
                   side: const BorderSide(color: Color(0xFF3A3A3A)),
                 ),
               );
@@ -818,7 +818,7 @@ class _UssdSessionScreenState extends State<UssdSessionScreen>
         fontSize: 13,
         fontWeight: FontWeight.w800,
         letterSpacing: 1.2,
-        color: AppColors.white,
+        color: AppColors.onSurface,
       ),
     );
   }

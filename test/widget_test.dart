@@ -1,9 +1,19 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:campuspay/core/crypto/ecdsa_service.dart';
+import 'package:campuspay/core/services/onboarding_service.dart';
 import 'package:campuspay/core/utils/upi_qr_parser.dart';
+import 'package:campuspay/ui/auth/login_signup_page.dart';
 import 'package:campuspay/main.dart';
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({
+      'campuspay_tour_completed': true,
+    });
+  });
+
   group('CampusPay Cryptographic & Offline Engine Tests', () {
     test('ECDSA secp256k1 signs and verifies offline payment payload', () {
       final ecdsa = EcdsaService();
@@ -122,13 +132,67 @@ void main() {
       expect(find.text('Skip'), findsOneWidget);
     });
 
-    testWidgets('CampusPayApp launches LoginScreen and renders auth UI when onboarding complete', (WidgetTester tester) async {
+    testWidgets('CampusPayApp launches MainNavigationScreen and prompts passwordless OTP auth on service usage', (WidgetTester tester) async {
+      await OnboardingService.completeTour();
       await tester.pumpWidget(const CampusPayApp(initialOnboardingCompleted: true));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.text('LOGIN'), findsOneWidget);
-      expect(find.text('Email'), findsWidgets);
+      // Home Screen renders for guest with hashed balance by default (zero mock data)
+      expect(find.text('CampusPay'), findsOneWidget);
+      expect(find.text('••••••••'), findsOneWidget);
+      expect(find.text('250'), findsNothing);
+
+      // Tapping eye button reveals the real balance
+      await tester.tap(find.byTooltip('Reveal Balance'));
+      await tester.pump();
+      expect(find.text('0'), findsOneWidget);
+      expect(find.text('••••••••'), findsNothing);
+
+      // Tapping eye button hides the balance again
+      await tester.tap(find.byTooltip('Hide Balance'));
+      await tester.pump();
+      expect(find.text('••••••••'), findsOneWidget);
+
+      expect(find.text('Add Money'), findsOneWidget);
+
+      // Tapping Add Money triggers gated login
+      await tester.tap(find.text('Add Money'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Welcome Back!'), findsOneWidget);
+      expect(find.text('GET OTP & LOGIN'), findsOneWidget);
+
+      // 1. Try logging in with an account that does NOT exist
+      await tester.enterText(find.byType(TextFormField).first, '9999999999');
+      await tester.tap(find.text('GET OTP & LOGIN'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Should verify account existence and reject non-existent number
+      expect(find.textContaining('No account found for "9999999999"'), findsOneWidget);
+      expect(find.text('Verify OTP'), findsNothing);
+
+      // 2. Enter registered phone number (seeded demo account: 9876543210)
+      await tester.enterText(find.byType(TextFormField).first, '9876543210');
+      await tester.tap(find.text('GET OTP & LOGIN'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // Enters OTP step (without showing demo OTP text)
+      expect(find.text('Verify OTP'), findsOneWidget);
+      expect(find.textContaining('Demo Standard OTP'), findsNothing);
+
+      // Enter standard OTP 1234
+      await tester.enterText(find.byType(TextFormField).first, '1234');
+      await tester.tap(find.text('VERIFY & PROCEED'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      // Login succeeds and Add Money modal appears
+      expect(AuthService.isLoggedIn, isTrue);
+      expect(find.text('Top Up Campus Wallet'), findsOneWidget);
     });
   });
 }

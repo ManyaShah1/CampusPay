@@ -19,8 +19,11 @@ class BlePaymentCarrier {
 Stream<Map<String, dynamic>> get receivedPayments =>
     _receivedPayments.stream;
 
-  final CentralManager _centralManager = CentralManager();
-  final PeripheralManager _peripheralManager = PeripheralManager();
+  CentralManager? _centralManagerInstance;
+  CentralManager get _centralManager => _centralManagerInstance ??= CentralManager();
+
+  PeripheralManager? _peripheralManagerInstance;
+  PeripheralManager get _peripheralManager => _peripheralManagerInstance ??= PeripheralManager();
 
   StreamSubscription<BluetoothLowEnergyStateChangedEventArgs>?
       _peripheralStateSubscription;
@@ -56,6 +59,10 @@ Stream<Map<String, dynamic>> get receivedPayments =>
   final Map<String, int> _chunkTotals = {};
 
   Future<void> initialize() async {
+    if (kIsWeb) {
+      debugPrint('[BLE] Web platform detected; BLE carrier is disabled.');
+      return;
+    }
     try {
       debugPrint('[BLE] initialize() started');
 

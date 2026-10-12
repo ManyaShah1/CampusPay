@@ -3,6 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  app_links_linux
   bluetooth_low_energy_linux
   url_launcher_linux
 )

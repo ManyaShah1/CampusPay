@@ -289,7 +289,7 @@ class SoundBoxScreen extends StatelessWidget {
                             fontFamily: 'SpaceGrotesk',
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
-                            color: AppColors.white,
+                            color: AppColors.onSurface,
                           ),
                         ),
                       ],
@@ -338,7 +338,7 @@ class SoundBoxScreen extends StatelessWidget {
                   fontFamily: 'SpaceGrotesk',
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.white,
+                  color: AppColors.onSurface,
                 ),
               ),
             ),
@@ -361,7 +361,7 @@ class SoundBoxScreen extends StatelessWidget {
                         children: [
                           Text(
                             item.merchantName, // Shows student payer name
-                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.white),
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.onSurface),
                           ),
                           const SizedBox(height: 2),
                           Text(

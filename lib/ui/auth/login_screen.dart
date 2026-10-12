@@ -3,18 +3,24 @@ import 'login_signup_page.dart';
 import '../screens/main_navigation_screen.dart';
 
 class LoginScreen extends StatelessWidget {
-  const LoginScreen({super.key});
+  final VoidCallback? onSuccess;
+
+  const LoginScreen({super.key, this.onSuccess});
 
   @override
   Widget build(BuildContext context) {
     return LoginSignupPage(
       onSuccess: () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const MainNavigationScreen(startTour: true),
-          ),
-        );
+        if (onSuccess != null) {
+          onSuccess!();
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const MainNavigationScreen(startTour: false),
+            ),
+          );
+        }
       },
     );
   }

@@ -214,7 +214,7 @@ class _PaymentFlowScreenState extends State<PaymentFlowScreen> {
                             style: GoogleFonts.plusJakartaSans(
                               fontWeight: FontWeight.w700,
                               fontSize: 14,
-                              color: AppColors.white,
+                              color: AppColors.onSurface,
                             ),
                           ),
                           Text(
@@ -280,7 +280,7 @@ class _PaymentFlowScreenState extends State<PaymentFlowScreen> {
                   style: GoogleFonts.bodoniModa(
                     fontSize: 36,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.white,
+                    color: AppColors.onSurface,
                   ),
                   decoration: const InputDecoration(
                     border: InputBorder.none,
@@ -332,7 +332,7 @@ class _PaymentFlowScreenState extends State<PaymentFlowScreen> {
                         fontWeight: FontWeight.w700,
                         color: isSelected
                             ? AppColors.backgroundBlack
-                            : AppColors.white,
+                            : AppColors.onSurface,
                       ),
                     ),
                   ),
@@ -487,7 +487,7 @@ class _PaymentFlowScreenState extends State<PaymentFlowScreen> {
           style: GoogleFonts.jetBrainsMono(
             fontSize: 11,
             fontWeight: FontWeight.w700,
-            color: AppColors.white,
+            color: AppColors.onSurface,
           ),
         ),
       ],

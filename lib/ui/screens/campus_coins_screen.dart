@@ -115,7 +115,7 @@ class _CampusCoinsScreenState extends State<CampusCoinsScreen> {
                               Text(
                                 'Voucher unlocked: $perkName!',
                                 style: GoogleFonts.plusJakartaSans(
-                                  color: AppColors.white,
+                                  color: AppColors.onSurface,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -479,7 +479,7 @@ class _CampusCoinsScreenState extends State<CampusCoinsScreen> {
                                       : FontWeight.w600,
                                   color: isSelected
                                       ? AppColors.onElectricYellow
-                                      : AppColors.white,
+                                      : AppColors.onSurface,
                                 ),
                               ),
                             ],

@@ -26,7 +26,7 @@ class ReceiptScreen extends StatelessWidget {
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
-            icon: const Icon(Icons.close_rounded, color: AppColors.white),
+            icon: const Icon(Icons.close_rounded, color: AppColors.onSurface),
             onPressed: () => Navigator.pop(context),
           ),
         ],
@@ -76,7 +76,7 @@ class ReceiptScreen extends StatelessWidget {
               style: GoogleFonts.bodoniModa(
                 fontSize: 48,
                 fontWeight: FontWeight.w800,
-                color: AppColors.white,
+                color: AppColors.onSurface,
                 letterSpacing: -1.5,
               ),
             ),
@@ -213,7 +213,7 @@ class ReceiptScreen extends StatelessWidget {
             style: GoogleFonts.jetBrainsMono(
               fontSize: 10,
               fontWeight: FontWeight.w700,
-              color: AppColors.white,
+              color: AppColors.onSurface,
             ),
           ),
         ),

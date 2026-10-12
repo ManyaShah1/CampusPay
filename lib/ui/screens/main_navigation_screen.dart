@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
+import '../auth/login_signup_page.dart';
 import 'campus_coins_screen.dart';
 import 'profile_settings_screen.dart';
 import 'scan_and_pay_screen.dart';
@@ -26,8 +27,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     super.initState();
     _screens = [
       StudentHomeScreen(
-        onNavigateToHistory: () => setState(() => _currentIndex = 1),
-        onNavigateToRewards: () => setState(() => _currentIndex = 3),
+        onNavigateToHistory: () => _onTabSelected(1),
+        onNavigateToRewards: () => _onTabSelected(3),
+        onNavigateToProfile: () => _onTabSelected(4),
         initialShowTour: widget.startTour,
       ),
       const TransactionsLedgerScreen(),
@@ -37,10 +39,28 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     ];
   }
 
-  void _onCenterScanPressed() {
-    Navigator.push(
+  void _onTabSelected(int index) {
+    if (index == 0) {
+      setState(() => _currentIndex = 0);
+      return;
+    }
+    AuthService.requireAuth(
       context,
-      MaterialPageRoute(builder: (_) => const ScanAndPayScreen()),
+      onAuthenticated: () {
+        setState(() => _currentIndex = index);
+      },
+    );
+  }
+
+  void _onCenterScanPressed() {
+    AuthService.requireAuth(
+      context,
+      onAuthenticated: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ScanAndPayScreen()),
+        );
+      },
     );
   }
 
@@ -147,7 +167,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     final color = isSelected ? AppColors.lightPurple : AppColors.mutedText;
 
     return GestureDetector(
-      onTap: () => setState(() => _currentIndex = index),
+      onTap: () => _onTabSelected(index),
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
         width: 60,

@@ -351,7 +351,7 @@ class _OfflinePaymentScreenState extends State<OfflinePaymentScreen>
                                   ),
                                   child: const Icon(
                                     Icons.speaker_rounded,
-                                    color: AppColors.white,
+                                    color: AppColors.onSurface,
                                     size: 22,
                                   ),
                                 ),

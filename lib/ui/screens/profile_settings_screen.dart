@@ -2,13 +2,270 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../data/models/student_profile.dart';
+import '../auth/login_signup_page.dart' show AuthService, ProfileAuthButton;
 import '../viewmodels/wallet_viewmodel.dart';
 import 'token_vault_screen.dart';
 import 'onboarding_screen.dart';
-import '../auth/login_signup_page.dart' show ProfileAuthButton;
 
 class ProfileSettingsScreen extends StatelessWidget {
   const ProfileSettingsScreen({super.key});
+
+  void _showCompleteProfileSheet(BuildContext context, StudentProfile student) {
+    final collegeCtrl = TextEditingController(
+      text: student.collegeName?.isNotEmpty == true
+          ? student.collegeName
+          : 'Don Bosco Institute of Technology (DBIT Mumbai)',
+    );
+    String selectedBranch = student.branch?.isNotEmpty == true
+        ? student.branch!
+        : 'Computer Engineering';
+    String selectedYear = student.year?.isNotEmpty == true
+        ? student.year!
+        : 'TE - 3rd Year';
+
+    final branches = [
+      'Computer Engineering',
+      'Information Technology',
+      'Electronics & Telecommunication (EXTC)',
+      'Mechanical Engineering',
+      'Artificial Intelligence & Data Science (AI & DS)',
+    ];
+
+    if (!branches.contains(selectedBranch)) {
+      branches.insert(0, selectedBranch);
+    }
+
+    final years = [
+      'FE - 1st Year',
+      'SE - 2nd Year',
+      'TE - 3rd Year',
+      'BE - 4th Year',
+    ];
+
+    if (!years.contains(selectedYear)) {
+      years.insert(0, selectedYear);
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Container(
+              padding: EdgeInsets.only(
+                top: 24,
+                left: 20,
+                right: 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.electricYellow.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.school_rounded,
+                            color: AppColors.onSurface,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Academic Profile',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.onSurface,
+                                ),
+                              ),
+                              Text(
+                                'Secondary information: College, Branch & Year',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  color: AppColors.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // 1. College Name
+                    Text(
+                      'COLLEGE NAME',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.onSurfaceVariant,
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      controller: collegeCtrl,
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.account_balance_rounded, size: 20),
+                        filled: true,
+                        fillColor: AppColors.surfaceContainerLow,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 2. Department / Branch
+                    Text(
+                      'ENGINEERING BRANCH / DEPARTMENT',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.onSurfaceVariant,
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    DropdownButtonFormField<String>(
+                      value: selectedBranch,
+                      items: branches.map((b) {
+                        return DropdownMenuItem(
+                          value: b,
+                          child: Text(b, style: GoogleFonts.plusJakartaSans(fontSize: 13)),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setSheetState(() => selectedBranch = val);
+                        }
+                      },
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.engineering_rounded, size: 20),
+                        filled: true,
+                        fillColor: AppColors.surfaceContainerLow,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 3. Year of Study
+                    Text(
+                      'ACADEMIC YEAR',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.onSurfaceVariant,
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    DropdownButtonFormField<String>(
+                      value: selectedYear,
+                      items: years.map((y) {
+                        return DropdownMenuItem(
+                          value: y,
+                          child: Text(y, style: GoogleFonts.plusJakartaSans(fontSize: 13)),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setSheetState(() => selectedYear = val);
+                        }
+                      },
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.calendar_today_rounded, size: 20),
+                        filled: true,
+                        fillColor: AppColors.surfaceContainerLow,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Save Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.electricYellow,
+                          foregroundColor: AppColors.onElectricYellow,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        onPressed: () async {
+                          await AuthService.updateSecondaryInfo(
+                            collegeName: collegeCtrl.text,
+                            branch: selectedBranch,
+                            year: selectedYear,
+                          );
+                          if (ctx.mounted) {
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Academic profile updated successfully!'),
+                                backgroundColor: Color(0xFF6A1B9A),
+                              ),
+                            );
+                          }
+                        },
+                        child: Text(
+                          'Save Academic Details',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,56 +282,62 @@ class ProfileSettingsScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // ── Top Identity Canvas Card (Vault Theme) ─────────────────────
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF6B21A8), Color(0xFF4C1D95)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.deepPurple.withValues(alpha: 0.35),
-                      blurRadius: 24,
-                      offset: const Offset(0, 8),
+              ValueListenableBuilder<StudentProfile?>(
+                valueListenable: AuthService.currentStudent,
+                builder: (context, student, _) {
+                  final isLoggedIn = student != null;
+                  final fullName = isLoggedIn ? student.fullName : 'Guest Student';
+                  final initial = isLoggedIn && student.firstName.isNotEmpty
+                      ? student.firstName[0].toUpperCase()
+                      : 'G';
+                  final isComplete = student?.isSecondaryComplete ?? false;
+
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF6B21A8), Color(0xFF4C1D95)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.deepPurple.withValues(alpha: 0.35),
+                          blurRadius: 24,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    // Avatar with Neon Rim
-                    Stack(
-                      alignment: Alignment.center,
-                      clipBehavior: Clip.none,
+                    child: Column(
                       children: [
-                        Container(
-                          width: 88,
-                          height: 88,
-                          padding: const EdgeInsets.all(3),
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: [
-                                AppColors.electricYellow,
-                                AppColors.lightPurple,
-                              ],
-                            ),
-                          ),
-                          child: Container(
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: AppColors.surfaceContainerLowest,
-                            ),
-                            child: ClipOval(
-                              child: Image.asset(
-                                'assets/images/profile_avatar.png',
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, _, _) => Center(
+                        // Avatar with Neon Rim
+                        Stack(
+                          alignment: Alignment.center,
+                          clipBehavior: Clip.none,
+                          children: [
+                            Container(
+                              width: 88,
+                              height: 88,
+                              padding: const EdgeInsets.all(3),
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppColors.electricYellow,
+                                    AppColors.lightPurple,
+                                  ],
+                                ),
+                              ),
+                              child: Container(
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: AppColors.surfaceContainerLowest,
+                                ),
+                                child: Center(
                                   child: Text(
-                                    'MS',
+                                    initial,
                                     style: GoogleFonts.bodoniModa(
                                       fontSize: 28,
                                       fontWeight: FontWeight.w800,
@@ -84,134 +347,206 @@ class ProfileSettingsScreen extends StatelessWidget {
                                 ),
                               ),
                             ),
-                          ),
+                            if (isComplete)
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.electricYellow,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.verified_rounded,
+                                    size: 16,
+                                    color: AppColors.onElectricYellow,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            width: 24,
-                            height: 24,
-                            decoration: const BoxDecoration(
-                              color: AppColors.electricYellow,
-                              shape: BoxShape.circle,
+
+                        const SizedBox(height: 12),
+
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              fullName,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.white,
+                              ),
                             ),
-                            child: const Icon(
-                              Icons.verified_rounded,
-                              size: 16,
-                              color: AppColors.onElectricYellow,
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: (isLoggedIn && isComplete)
+                                    ? AppColors.electricYellow.withValues(alpha: 0.2)
+                                    : const Color(0xFFF59E0B).withValues(alpha: 0.25),
+                                borderRadius: BorderRadius.circular(9999),
+                              ),
+                              child: Text(
+                                isLoggedIn
+                                    ? (isComplete ? 'Verified Student' : 'Incomplete (Step 2/2)')
+                                    : 'Guest',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: (isLoggedIn && isComplete)
+                                      ? AppColors.electricYellow
+                                      : const Color(0xFFFBBF24),
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
-                      ],
-                    ),
 
-                    const SizedBox(height: 12),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
+                        const SizedBox(height: 3),
                         Text(
-                          'Manya Shah',
+                          isLoggedIn
+                              ? (isComplete
+                                  ? '${student.collegeName} • ${student.branch} • ${student.year}'
+                                  : 'Academic Details Incomplete')
+                              : 'Explore mode • DBIT Mumbai',
+                          textAlign: TextAlign.center,
                           style: GoogleFonts.plusJakartaSans(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.white,
+                            fontSize: 12,
+                            color: AppColors.lightPurpleDim,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.electricYellow.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(9999),
-                          ),
-                          child: Text(
-                            'Active',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.electricYellow,
+
+                        if (isLoggedIn) ...[
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 6,
                             ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 3),
-                    Text(
-                      'DBIT Mumbai • B.Tech Computer Engineering',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
-                        color: AppColors.lightPurpleDim,
-                      ),
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(9999),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.badge_rounded,
-                            size: 15,
-                            color: AppColors.electricYellow,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Student ID: DBIT2024021',
-                            style: GoogleFonts.jetBrainsMono(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.white,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.25),
+                              borderRadius: BorderRadius.circular(9999),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.badge_rounded,
+                                  size: 15,
+                                  color: AppColors.electricYellow,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Student ID: ${student.studentId}',
+                                  style: GoogleFonts.jetBrainsMono(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.white,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
-                      ),
+
+                        // Prompt banner if secondary information is incomplete
+                        if (isLoggedIn && !isComplete) ...[
+                          Container(
+                            margin: const EdgeInsets.only(top: 14),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: const Color(0xFFF59E0B)),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: const [
+                                    Icon(Icons.info_outline_rounded, color: Color(0xFFB45309), size: 18),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Academic Profile Incomplete',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 12,
+                                          color: Color(0xFFB45309),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                const Text(
+                                  'Add your College, Branch, and Academic Year to unlock campus discounts and exam fee settlements.',
+                                  style: TextStyle(fontSize: 11, color: Color(0xFF78350F)),
+                                ),
+                                const SizedBox(height: 10),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFF59E0B),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      elevation: 0,
+                                    ),
+                                    onPressed: () => _showCompleteProfileSheet(context, student),
+                                    child: const Text(
+                                      'Complete Profile Now (Step 2 of 2)',
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+
+                        const SizedBox(height: 16),
+
+                        if (isLoggedIn)
+                          ElevatedButton.icon(
+                            onPressed: () => _showCompleteProfileSheet(context, student),
+                            icon: const Icon(Icons.edit_rounded, size: 16),
+                            label: Text(
+                              isComplete ? 'Edit Academic Profile' : 'Complete Profile',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.electricYellow,
+                              foregroundColor: AppColors.onElectricYellow,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(9999),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 10,
+                              ),
+                              elevation: 0,
+                            ),
+                          ),
+
+                        const SizedBox(height: 10),
+                        const ProfileAuthButton(),
+                      ],
                     ),
-
-                    const SizedBox(height: 16),
-
-                    ElevatedButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.edit_rounded, size: 16),
-                      label: Text(
-                        'Edit Profile',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.electricYellow,
-                        foregroundColor: AppColors.onElectricYellow,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(9999),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 10,
-                        ),
-                        elevation: 0,
-                      ),
-                    ),
-
-                    const SizedBox(height: 10),
-                    const ProfileAuthButton(),
-                  ],
-                ),
+                  );
+                },
               ),
 
               const SizedBox(height: 16),

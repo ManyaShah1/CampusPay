@@ -76,26 +76,33 @@ class _HomeTourOverlayState extends State<HomeTourOverlay>
     final targetContext = target.key.currentContext;
 
     if (targetContext != null) {
-      // Smoothly scroll to the target widget
-      Scrollable.ensureVisible(
-        targetContext,
-        duration: const Duration(milliseconds: 320),
-        alignment: 0.35,
-        curve: Curves.easeInOutCubic,
-      );
+      // Scroll to target if it is within a Scrollable
+      final scrollable = Scrollable.maybeOf(targetContext);
+      if (scrollable != null) {
+        Scrollable.ensureVisible(
+          targetContext,
+          duration: const Duration(milliseconds: 320),
+          alignment: 0.35,
+          curve: Curves.easeInOutCubic,
+        );
+      }
 
-      // Measure coordinates after scroll adjusts
-      Future.delayed(const Duration(milliseconds: 350), () {
+      void measure() {
         if (!mounted) return;
+        final overlayBox = context.findRenderObject() as RenderBox?;
         final renderBox =
             target.key.currentContext?.findRenderObject() as RenderBox?;
-        if (renderBox != null && renderBox.hasSize) {
-          final offset = renderBox.localToGlobal(Offset.zero);
+        if (overlayBox != null && renderBox != null && renderBox.hasSize) {
+          final localOffset =
+              overlayBox.globalToLocal(renderBox.localToGlobal(Offset.zero));
           setState(() {
-            _targetRect = offset & renderBox.size;
+            _targetRect = localOffset & renderBox.size;
           });
         }
-      });
+      }
+
+      WidgetsBinding.instance.addPostFrameCallback((_) => measure());
+      Future.delayed(const Duration(milliseconds: 340), measure);
     }
   }
 
@@ -139,7 +146,7 @@ class _HomeTourOverlayState extends State<HomeTourOverlay>
 
     // Determine tooltip position relative to target
     final showBelow = _targetRect == null ||
-        (_targetRect!.bottom + 260 < screenSize.height);
+        (_targetRect!.bottom + 270 < screenSize.height);
 
     double? tooltipTop;
     double? tooltipBottom;
@@ -147,10 +154,10 @@ class _HomeTourOverlayState extends State<HomeTourOverlay>
     if (_targetRect != null) {
       if (showBelow) {
         tooltipTop = (_targetRect!.bottom + 14)
-            .clamp(16.0, screenSize.height - 280.0);
+            .clamp(16.0, screenSize.height - 290.0);
       } else {
         tooltipBottom = (screenSize.height - _targetRect!.top + 14)
-            .clamp(16.0, screenSize.height - 280.0);
+            .clamp(16.0, screenSize.height - 290.0);
       }
     }
 
@@ -184,8 +191,8 @@ class _HomeTourOverlayState extends State<HomeTourOverlay>
           Positioned(
             left: 16,
             right: 16,
-            top: tooltipTop,
-            bottom: tooltipBottom,
+            top: showBelow ? tooltipTop : null,
+            bottom: showBelow ? null : tooltipBottom,
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 250),
               child: _buildTooltipCard(
@@ -418,7 +425,7 @@ class _HomeTourOverlayState extends State<HomeTourOverlay>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          isLast ? 'Done 🚀' : 'Next ➔',
+                          isLast ? 'Done ' : 'Next ➔',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 12,
                             fontWeight: FontWeight.w800,

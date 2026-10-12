@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 class EnvService {
   static String razorpayKeyId = '';
   static String razorpayKeySecret = '';
+  static String supabaseUrl = '';
+  static String supabaseAnonKey = '';
 
   /// Load `.env` from app assets or fallback
   static Future<void> load() async {
@@ -22,10 +24,15 @@ class EnvService {
             razorpayKeyId = val;
           } else if (key == 'RAZORPAY_KEY_SECRET' && val.isNotEmpty) {
             razorpayKeySecret = val;
+          } else if (key == 'SUPABASE_URL' && val.isNotEmpty) {
+            supabaseUrl = val;
+          } else if (key == 'SUPABASE_ANON_KEY' && val.isNotEmpty) {
+            supabaseAnonKey = val;
           }
         }
       }
       debugPrint('[EnvService] Loaded Razorpay Key ID: $razorpayKeyId');
+      debugPrint('[EnvService] Loaded Supabase URL: $supabaseUrl');
     } catch (e) {
       debugPrint('[EnvService] .env asset load fallback: $e');
     }
