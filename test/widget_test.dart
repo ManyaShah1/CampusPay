@@ -193,6 +193,18 @@ void main() {
       // Login succeeds and Add Money modal appears
       expect(AuthService.isLoggedIn, isTrue);
       expect(find.text('Top Up Campus Wallet'), findsOneWidget);
+      expect(find.text('+₹200'), findsOneWidget);
+      expect(find.text('+₹500'), findsOneWidget);
+      expect(find.text('+₹1000'), findsOneWidget);
+
+      // Tap +₹500: directly adds money without Razorpay gateway
+      await tester.tap(find.text('+₹500'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      // Bottom sheet is closed and balance updates directly without Razorpay
+      expect(find.text('Top Up Campus Wallet'), findsNothing);
+      expect(find.text('500'), findsOneWidget);
     });
   });
 }

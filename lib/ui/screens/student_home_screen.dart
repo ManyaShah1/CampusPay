@@ -317,6 +317,59 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     }
   }
 
+  void _addFundsDirectly(double amount) {
+    if (!mounted) return;
+    final walletVM = Provider.of<WalletViewModel>(context, listen: false);
+    walletVM.addFunds(amount);
+    HapticFeedback.heavyImpact();
+
+    // Auto-reveal the balance so the student sees their updated money immediately
+    setState(() => _isBalanceVisible = true);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: AppColors.surfaceContainerHigh,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: const BorderSide(color: AppColors.successGreen, width: 1.2),
+        ),
+        content: Row(
+          children: [
+            const Icon(
+              Icons.check_circle_rounded,
+              color: AppColors.successGreen,
+              size: 22,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '₹${amount.toInt()} Added to Campus Wallet!',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.onSurface,
+                    ),
+                  ),
+                  Text(
+                    'Instant top-up • Encrypted on-device',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showAddMoneyModal() {
     HapticFeedback.lightImpact();
     final customAmountController = TextEditingController();
@@ -378,13 +431,13 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(
-                          Icons.verified_user_rounded,
+                          Icons.flash_on_rounded,
                           color: AppColors.electricYellow,
                           size: 13,
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          'Razorpay Gateway',
+                          'Direct Top-Up',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
@@ -398,7 +451,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Instant recharge via UPI, Debit/Credit Card, or Netbanking',
+                'Tap preset to add funds instantly, or enter custom amount',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 12,
                   color: AppColors.onSurfaceVariant,
@@ -469,7 +522,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                     final amt = double.tryParse(text);
                     if (amt != null && amt > 0) {
                       Navigator.pop(ctx);
-                      _startRazorpayTopUp(amt);
+                      _addFundsDirectly(amt);
                     }
                   },
                   icon: const Icon(
@@ -478,7 +531,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                     color: AppColors.onElectricYellow,
                   ),
                   label: Text(
-                    'Proceed to Razorpay Checkout',
+                    'Direct Add to Wallet',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
@@ -491,6 +544,44 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                       borderRadius: BorderRadius.circular(14),
                     ),
                     elevation: 0,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    final text = customAmountController.text.trim();
+                    final amt = double.tryParse(text);
+                    if (amt != null && amt > 0) {
+                      Navigator.pop(ctx);
+                      _startRazorpayTopUp(amt);
+                    } else {
+                      Navigator.pop(ctx);
+                      _startRazorpayTopUp(200);
+                    }
+                  },
+                  icon: const Icon(
+                    Icons.payment_rounded,
+                    size: 16,
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                  label: Text(
+                    'Pay via Razorpay Gateway',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.borderStroke),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                 ),
               ),
@@ -508,7 +599,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
         onPressed: () {
           HapticFeedback.mediumImpact();
           Navigator.pop(ctx);
-          _startRazorpayTopUp(amount);
+          _addFundsDirectly(amount);
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.surfaceContainerLow,

@@ -545,12 +545,29 @@ class _LoginSignupPageState extends State<LoginSignupPage> {
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(
-            color: AuthColors.purple,
+          width: 76,
+          height: 76,
+          decoration: BoxDecoration(
             shape: BoxShape.circle,
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: AuthColors.purple.withOpacity(0.18),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          child: const Icon(Icons.shield_rounded, size: 44, color: AuthColors.yellow),
+          child: ClipOval(
+            child: Image.asset(
+              'assets/images/campus_pay_logo.png',
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Container(
+                color: AuthColors.purple,
+                child: const Icon(Icons.shield_rounded, size: 40, color: AuthColors.yellow),
+              ),
+            ),
+          ),
         ),
         const SizedBox(height: 18),
         Text(
@@ -757,12 +774,29 @@ class _LoginSignupPageState extends State<LoginSignupPage> {
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(
-            color: AuthColors.purple,
+          width: 76,
+          height: 76,
+          decoration: BoxDecoration(
             shape: BoxShape.circle,
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: AuthColors.purple.withOpacity(0.18),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          child: const Icon(Icons.lock_clock_rounded, size: 44, color: AuthColors.yellow),
+          child: ClipOval(
+            child: Image.asset(
+              'assets/images/campus_pay_logo.png',
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Container(
+                color: AuthColors.purple,
+                child: const Icon(Icons.lock_clock_rounded, size: 40, color: AuthColors.yellow),
+              ),
+            ),
+          ),
         ),
         const SizedBox(height: 18),
         const Text(
